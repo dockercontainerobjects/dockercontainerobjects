@@ -1,0 +1,14 @@
+
+// NOTES:
+// [1] the dependency list excludes log4j, library clients must make a decision on the logging framework to use
+//     at runtime, clients need to include log4j, logback, log4j-over-slf4j or any other implementation of log4j api
+
+dependencies {
+    compile project(':dockercontainerobjects-core')
+    compile "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
+    compile "junit:junit:${junitClassicVersion}"
+    compile "org.slf4j:slf4j-api:${slf4jVersion}"
+
+    testRuntime "org.junit.vintage:junit-vintage-engine:${junitVintageVersion}"
+    testRuntime "ch.qos.logback:logback-classic:${logbackVersion}" // [1]
+}

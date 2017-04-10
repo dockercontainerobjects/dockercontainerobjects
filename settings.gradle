@@ -1,0 +1,3 @@
+rootProject.name = 'dockercontainerobjects'
+include ':dockercontainerobjects-core', ':dockercontainerobjects-junit-platform1', ':dockercontainerobjects-junit-junit4'
+
