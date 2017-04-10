@@ -1,6 +1,6 @@
 # Docker Container Objects JUnit Platform Extension
 
-[![Build Status](https://travis-ci.org/rivasdiaz/dockercontainerobjects.svg?branch=master)](https://travis-ci.org/rivasdiaz/dockercontainerobjects)
+[![Build Status](https://travis-ci.org/dockercontainerobjects/dockercontainerobjects.svg?branch=master)](https://travis-ci.org/dockercontainerobjects/dockercontainerobjects)
 
 This is an extension for JUnit Platform 1, a.k.a. JUnit 5
 
