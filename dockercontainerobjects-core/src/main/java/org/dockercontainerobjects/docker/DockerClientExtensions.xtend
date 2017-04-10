@@ -12,10 +12,40 @@ import org.slf4j.LoggerFactory
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.core.command.WaitContainerResultCallback
 import com.github.dockerjava.api.model.NetworkSettings
+import com.github.dockerjava.api.exception.NotFoundException
+import com.github.dockerjava.core.command.PullImageResultCallback
 
 class DockerClientExtensions {
 
     private static val l = LoggerFactory.getLogger(DockerClientExtensions)
+
+    static def inspectImage(DockerClient dockerClient, String imageId) throws NotFoundException {
+        l.debug [ "Inspecting docker image with id '%s'" <<< imageId ]
+        val response = dockerClient.inspectImageCmd(imageId).exec
+        l.debug [ "Docker image with id '%s' created on '%s'" <<< #[imageId, response.created] ]
+        response
+    }
+
+    static def isImageAvailable(DockerClient dockerClient, String imageId) {
+        try {
+            dockerClient.inspectImage(imageId)
+            true
+        } catch (NotFoundException e) {
+            false
+        }
+    }
+
+    static def pullImage(DockerClient dockerClient, String imageId) {
+        dockerClient.pullImageCmd(imageId)
+            .exec(new PullImageResultCallback)
+            .awaitSuccess
+        dockerClient.inspectImage(imageId)
+    }
+
+    static def removeImage(DockerClient dockerClient, String imageId) throws NotFoundException {
+        dockerClient.removeImageCmd(imageId)
+            .exec
+    }
 
     static def createContainer(DockerClient dockerClient, String imageId) {
         l.debug [ "Creating docker container from image '%s'" <<< imageId ]
@@ -35,8 +65,8 @@ class DockerClientExtensions {
                             #[containerId, response.state.exitCode, response.state.error ])
         response
     }
-    
-    static def inspectContainer(DockerClient dockerClient, String containerId) {
+
+    static def inspectContainer(DockerClient dockerClient, String containerId) throws NotFoundException {
         l.debug [ "Inspecting docker container with id '%s'" <<< containerId ]
         val response = dockerClient.inspectContainerCmd(containerId).exec
         l.debug [ "Docker container with id '%s' is in state '%s'" <<< #[containerId, response.state] ]
@@ -87,6 +117,7 @@ class DockerClientExtensions {
     }
 
     static def inetAddress(NetworkSettings networkSettings) {
+        // TODO use system property java.net.preferIPv6Addresses to choose between IPv6 and IPv4
         networkSettings.inet6Address ?: networkSettings.inet4Address
     }
 

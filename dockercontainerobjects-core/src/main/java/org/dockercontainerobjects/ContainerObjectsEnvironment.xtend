@@ -50,6 +50,7 @@ class ContainerObjectsEnvironment implements AutoCloseable {
     @Data protected static class ImageRegistrationInfo {
         String id
         boolean dynamic
+        boolean autoRemove
     }
 
     @Data protected static class ContainerRegistrationInfo {
