@@ -21,7 +21,7 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 @RunWith(JUnitPlatform.class)
-@DisplayName("Container object dynamic creation tests")
+@DisplayName("Container object lifecycle tests")
 @Tag("docker")
 public class SimpleContainerLifecycleTest extends ContainerObjectManagerBasedTest {
 

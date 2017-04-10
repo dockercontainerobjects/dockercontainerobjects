@@ -81,6 +81,7 @@ annotation ContainerAddress {}
 annotation RegistryImage {
     String value = ''
     boolean forcePull = false
+    boolean autoRemove = false
 }
 
 @Documented

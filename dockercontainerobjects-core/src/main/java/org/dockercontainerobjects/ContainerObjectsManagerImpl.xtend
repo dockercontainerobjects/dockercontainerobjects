@@ -4,9 +4,12 @@ import static extension java.util.Optional.empty
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.createContainer
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inetAddressOfType
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inspectContainer
+import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inspectImage
+import static extension org.dockercontainerobjects.docker.DockerClientExtensions.pullImage
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.startContainer
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.stopContainer
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.removeContainer
+import static extension org.dockercontainerobjects.docker.DockerClientExtensions.removeImage
 import static extension org.dockercontainerobjects.util.AccessibleObjects.annotatedWith
 import static extension org.dockercontainerobjects.util.AccessibleObjects.instantiate
 import static extension org.dockercontainerobjects.util.Fields.ofType
@@ -18,7 +21,6 @@ import static extension org.dockercontainerobjects.util.Members.onInstance
 import static extension org.dockercontainerobjects.util.Methods.call
 import static extension org.dockercontainerobjects.util.Methods.expectingNoParameters
 import static extension org.dockercontainerobjects.util.Methods.invokeInstanceMethods
-import static extension org.dockercontainerobjects.util.Methods.isExpectingNoParameters
 import static extension org.dockercontainerobjects.util.Methods.isOfReturnType
 import static extension org.dockercontainerobjects.util.Methods.findMethods
 import static extension org.dockercontainerobjects.util.Optionals.unsure
@@ -41,12 +43,15 @@ import org.dockercontainerobjects.annotations.BeforeCreating
 import org.dockercontainerobjects.annotations.BeforeStarting
 import org.dockercontainerobjects.annotations.BeforeStopping
 import org.dockercontainerobjects.annotations.BeforeRemoving
+import org.dockercontainerobjects.annotations.BuildImage
 import org.dockercontainerobjects.annotations.ContainerAddress
 import org.dockercontainerobjects.annotations.ContainerId
 import org.dockercontainerobjects.annotations.RegistryImage
 import org.slf4j.LoggerFactory
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.model.NetworkSettings
+import com.github.dockerjava.api.exception.DockerException
 
 class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
@@ -141,28 +146,69 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
         val containerType = containerInstance.class
         // check for image from annotation or method
         // TODO check for build from annotation or method
-        val imageAnnotation = containerType.getAnnotation(RegistryImage).unsure
-        val imageMethods = containerType.findMethods(onInstance && expectingNoParameters && annotatedWith(RegistryImage))
-            .stream.collect(Collectors.toList)
-        if ((!imageAnnotation.present && imageMethods.empty) ||
-                (imageAnnotation.present && !imageMethods.empty) ||
-                (imageMethods.size > 1))
-            throw new IllegalStateException(
-                    "Container class '%s' must be annotated with '%s' annotation " +
-                            "or must have one method annotated with '%s' annotation" <<<
-                            #[containerType, RegistryImage.simpleName, RegistryImage.simpleName])
-        val imageMethod = imageMethods.stream.findAny
-        val imageId = imageMethod.map [
-            if (!isOfReturnType(String) || !isExpectingNoParameters)
-                throw new IllegalStateException(
-                        "Method '%s' in container class '%s' must have no arguments
-                        and return '%s'" <<< #[it, containerType, String.simpleName])
-            call(containerInstance) as String
-        ].orElseGet [
-            imageAnnotation.get.value
-        ]
+        val registryImageAnnotation = containerType.getAnnotation(RegistryImage).unsure
+        val registryImageMethods = containerType.findMethods(expectingNoParameters && annotatedWith(RegistryImage))
+                .stream
+                .collect(Collectors.toList)
+        val buildImageAnnotation = containerType.getAnnotation(BuildImage).unsure
+        val buildImageMethods = containerType.findMethods(expectingNoParameters && annotatedWith(BuildImage))
+                .stream
+                .collect(Collectors.toList)
+        var options = 0
+        if (registryImageAnnotation.present) options++
+        options += registryImageMethods.size
+        if (buildImageAnnotation.present) options++
+        options += buildImageMethods.size
+        if (options != 1)
+            throw new IllegalArgumentException(
+                "Container class '%s' has more than one way to define the image to use" <<< containerType.simpleName);
+        var String imageId = null
+        var boolean forcePull = false
+        var boolean autoRemove = false
 
-        new ImageRegistrationInfo(imageId, false)
+        if (registryImageAnnotation.present) {
+            val registryImageAnnotationValue = registryImageAnnotation.get
+            imageId = registryImageAnnotationValue.value
+            if (imageId === null || imageId.empty)
+                throw new IllegalArgumentException(
+                    "Annotation '%s' on class '%s' must define a value to be used to define the image to use" <<<
+                        #[RegistryImage.simpleName, containerType.simpleName])
+            forcePull = registryImageAnnotationValue.forcePull
+            autoRemove = registryImageAnnotationValue.autoRemove
+        } else if (!registryImageMethods.empty) {
+            val registryImageMethod = registryImageMethods.get(0)
+            if (!registryImageMethod.isOfReturnType(String))
+                throw new IllegalArgumentException(
+                    "Method '%s' on class '%s' must return '%s' to be used to define the image to use" <<<
+                        #[registryImageMethod, containerType.simpleName, String.simpleName]);
+            val registryImageAnnotationValue = registryImageMethod.getAnnotation(RegistryImage)
+            imageId = registryImageAnnotationValue.value
+            if (imageId !== null && !imageId.empty)
+                throw new IllegalArgumentException(
+                    "Annotation '%s' on method '%s' on class '%s' cannot define a value to be used to define the image to use" <<<
+                        #[RegistryImage.simpleName, registryImageMethod, containerType.simpleName])
+            imageId = registryImageMethod.call(containerInstance) as String
+            if (imageId === null || imageId.empty)
+                throw new IllegalArgumentException(
+                    "Method '%s' on class '%s' must return a non-null value to be used to define the image to use" <<<
+                        #[registryImageMethod, containerType.simpleName])
+            forcePull = registryImageAnnotationValue.forcePull
+            autoRemove = registryImageAnnotationValue.autoRemove
+        }
+
+        val imagePresent =
+            try {
+                imageId = dockerClient.inspectImage(imageId).id
+                true
+            } catch (NotFoundException ex) {
+                false
+            }
+        if (imagePresent) autoRemove = false
+        if (forcePull || !imagePresent) {
+            imageId = dockerClient.pullImage(imageId).id
+        }
+
+        new ImageRegistrationInfo(imageId, false, autoRemove)
     }
 
     private def createContainer(Object containerInstance, ImageRegistrationInfo imageInfo) {
@@ -202,6 +248,18 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
     }
 
     private def teardownImage(Object containerInstance, ImageRegistrationInfo imageInfo) {
+        // try to remove image if requested
+        if (imageInfo.autoRemove)
+            try {
+                dockerClient.removeImage(imageInfo.id)
+            } catch (NotFoundException e) {
+                // if the image is already removed, log and ignore
+                l.warn("Image '%s' requested to be auto-removed, but was not found" <<< #[imageInfo.id], e)
+            } catch (DockerException e) {
+                // TODO check if there is a more specific exception for this case
+                // if the image is still in use, log and ignore
+                l.warn("Image '%s' requested to be auto-removed, but seems to be still in use" <<< #[imageInfo.id], e)
+            }
     }
 
     private static def void invokeContainerLifecycleListeners(Object containerInstance,
