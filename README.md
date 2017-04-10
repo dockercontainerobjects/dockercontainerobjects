@@ -1,5 +1,7 @@
 # Docker Container Objects JUnit Platform Extension
 
+[![Build Status](https://travis-ci.org/rivasdiaz/dockercontainerobjects.svg?branch=master)](https://travis-ci.org/rivasdiaz/dockercontainerobjects)
+
 This is an extension for JUnit Platform 1, a.k.a. JUnit 5
 
 It is based on the concept of Container Objects defined in [Arquillian](http://www.arquillian.org) Cube extension
