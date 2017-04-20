@@ -6,14 +6,15 @@
 //     this dependency can be removed if only Gradle or JUnit Platform support is desired
 
 dependencies {
-    compile project(':dockercontainerobjects-core')
-    compile "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
-    compile "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
-    compile "org.slf4j:slf4j-api:${slf4jVersion}"
+    api project(':dockercontainerobjects-core')
+    api 'org.junit.jupiter:junit-jupiter-api'
 
-    testCompile "junit:junit:${junitClassicVersion}" // [2]
-    testCompile "org.junit.platform:junit-platform-runner:${junitPlatformVersion}"
+    implementation 'org.eclipse.xtend:org.eclipse.xtend.lib'
+    implementation 'org.slf4j:slf4j-api'
 
-    testRuntime "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
-    testRuntime "ch.qos.logback:logback-classic:${logbackVersion}" // [1]
+    testImplementation 'junit:junit' // [2]
+    testImplementation 'org.junit.platform:junit-platform-runner' // [2]
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testRuntimeOnly 'ch.qos.logback:logback-classic' // [1]
 }

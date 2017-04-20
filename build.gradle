@@ -1,41 +1,57 @@
 buildscript {
-    ext {
-        xtendPluginVersion = '1.0.17'
-        errorPronePluginVersion = '0.0.9'
-        junitPlatformPluginVersion = '1.0.0-M4'
-    }
     repositories {
         maven { url 'https://plugins.gradle.org/m2' }
         jcenter()
     }
     dependencies {
-        classpath "org.xtext:xtext-gradle-plugin:${xtendPluginVersion}"
+        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:${bintrayPluginVersion}"
+        classpath "com.netflix.nebula:gradle-resolution-rules-plugin:${nebulaResolutionRulesPluginVersion}"
+        classpath "com.netflix.nebula:nebula-dependency-recommender:${nebulaDependencyRecommenderPluginVersion}"
+        classpath "com.netflix.nebula:nebula-project-plugin:${nebulaProjectPluginVersion}"
+        classpath "com.netflix.nebula:nebula-release-plugin:${nebulaReleasePluginVersion}"
         classpath "net.ltgt.gradle:gradle-errorprone-plugin:${errorPronePluginVersion}"
         classpath "org.junit.platform:junit-platform-gradle-plugin:${junitPlatformPluginVersion}"
+        classpath "org.xtext:xtext-gradle-plugin:${xtendPluginVersion}"
     }
 }
 
+allprojects {
+    apply plugin: 'com.jfrog.bintray'
+    apply plugin: 'nebula.project'
+    apply plugin: 'nebula.nebula-release'
+}
+
 subprojects {
-    apply plugin: 'java'
-    apply plugin: 'org.xtext.xtend'
+    apply plugin: 'java-library'
+    apply plugin: 'nebula.maven-apache-license'
+    apply plugin: 'nebula.dependency-recommender'
+    apply plugin: 'nebula.resolution-rules'
     apply plugin: 'net.ltgt.errorprone'
     apply plugin: 'org.junit.platform.gradle.plugin'
-
-    group 'org.dockecontainerobjects'
-    version '1.0-SNAPSHOT'
+    apply plugin: 'org.xtext.xtend'
 
     ext {
-        javaVersion = '1.8'
-        xtendVersion = '2.11.0'
-        junitPlatformVersionPrefix = '.0-M4'
-        junitPlatformVersion = "1.0${junitPlatformVersionPrefix}"
-        junitClassicVersion = '4.12'
-        junitJupiterVersion = "5.0${junitPlatformVersionPrefix}"
-        junitVintageVersion = "${junitClassicVersion}${junitPlatformVersionPrefix}"
-        dockerJavaVersion = '3.0.8'
-        javaxInjectVersion = '1'
-        slf4jVersion = '1.7.25'
-        logbackVersion = '1.2.2'
+        projectId = rootProject.name
+        projectName = rootProject.description
+
+        githubOrgId = projectId
+        githubProjectRepo = githubOrgId + '/' + projectId
+        githubProjectUrl = 'https://github.com/' + githubProjectRepo
+        githubProjectScmUrl = githubProjectUrl + '.git'
+        githubProjectIssuesUrl = githubProjectUrl + '/issues'
+
+        bintrayOrgId = projectId
+        bintrayRepo = 'maven'
+        bintrayName = project.name
+    }
+
+    contacts {
+        'rivasdiaz@gmail.com' {
+            moniker 'Ramon Rivas'
+            github 'rivasdiaz'
+            twitter 'rivasdiaz'
+            roles ['committer']
+        }
     }
 
     sourceCompatibility = javaVersion
@@ -61,9 +77,59 @@ subprojects {
         validator {
         }
     }
+
+    dependencyRecommendations {
+        map recommendations: [
+                // Xtend
+                'org.eclipse.xtend:org.eclipse.xtend.lib': project.xtendVersion,
+                // Javax Inject
+                'javax.inject:javax.inject': project.javaxInjectVersion,
+                // Docker Java
+                'com.github.docker-java:docker-java': project.dockerJavaVersion,
+                // Logging: SLF4J + Logback
+                'org.slf4j:slf4j-api': project.slf4jVersion,
+                'ch.qos.logback:logback-classic': project.logbackVersion,
+                // JUnit
+                'junit:junit': project.junitClassicVersion,
+                'org.junit.platform:junit-platform-runner': project.junitPlatformVersion,
+                'org.junit.jupiter:junit-jupiter-api': project.junitJupiterVersion,
+                'org.junit.jupiter:junit-jupiter-engine': project.junitJupiterVersion,
+                'org.junit.vintage:junit-vintage-engine': project.junitVintageVersion,
+        ]
+    }
+
+    dependencies {
+        resolutionRules files("${rootProject.projectDir}/src/main/rules/exclude-log4j.json")
+    }
+
+    bintray {
+        user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+        key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
+        publications = ['nebula']
+        dryRun = false
+        pkg {
+            repo = project.bintrayRepo
+            name = project.bintrayName
+            userOrg = project.bintrayOrgId
+            licenses = ['Apache-2.0']
+            websiteUrl = project.githubProjectUrl
+            vcsUrl = project.githubProjectScmUrl
+            issueTrackerUrl = project.githubProjectIssuesUrl
+            githubRepo = project.githubProjectRepo
+            githubReleaseNotesFile = 'README.md'
+            publicDownloadNumbers = true
+            version {
+                name = project.version
+                released = new Date()
+            }
+        }
+    }
 }
 
 task wrapper(type: Wrapper) {
     gradleVersion = '3.4.1'
 }
 
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

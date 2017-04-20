@@ -6,17 +6,16 @@
 //     this dependency can be removed if only Gradle or JUnit Platform support is desired
 
 dependencies {
-    compile "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
-    compile ("com.github.docker-java:docker-java:${dockerJavaVersion}") {
-        exclude group: 'log4j', module: 'log4j' // [1]
-    }
-    compile "javax.inject:javax.inject:${javaxInjectVersion}"
-    compile "org.slf4j:slf4j-api:${slf4jVersion}"
+    api 'com.github.docker-java:docker-java' // [1]
+    api 'javax.inject:javax.inject'
 
-    testCompile "junit:junit:${junitClassicVersion}" // [2]
-    testCompile "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
-    testCompile "org.junit.platform:junit-platform-runner:${junitPlatformVersion}"
+    implementation 'org.eclipse.xtend:org.eclipse.xtend.lib'
+    implementation 'org.slf4j:slf4j-api'
 
-    testRuntime "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
-    testRuntime "ch.qos.logback:logback-classic:${logbackVersion}" // [1]
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'junit:junit' // [2]
+    testImplementation 'org.junit.platform:junit-platform-runner' // [2]
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testRuntimeOnly 'ch.qos.logback:logback-classic'
 }
