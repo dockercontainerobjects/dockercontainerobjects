@@ -4,11 +4,12 @@
 //     at runtime, clients need to include log4j, logback, log4j-over-slf4j or any other implementation of log4j api
 
 dependencies {
-    compile project(':dockercontainerobjects-core')
-    compile "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
-    compile "junit:junit:${junitClassicVersion}"
-    compile "org.slf4j:slf4j-api:${slf4jVersion}"
+    api project(':dockercontainerobjects-core')
+    api 'junit:junit'
 
-    testRuntime "org.junit.vintage:junit-vintage-engine:${junitVintageVersion}"
-    testRuntime "ch.qos.logback:logback-classic:${logbackVersion}" // [1]
+    implementation 'org.eclipse.xtend:org.eclipse.xtend.lib'
+    implementation 'org.slf4j:slf4j-api'
+
+    testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
+    testRuntimeOnly 'ch.qos.logback:logback-classic' // [1]
 }
