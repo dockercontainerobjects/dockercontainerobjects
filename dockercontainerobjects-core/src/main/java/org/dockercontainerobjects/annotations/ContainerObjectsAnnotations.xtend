@@ -1,9 +1,10 @@
 package org.dockercontainerobjects.annotations
 
-import java.lang.^annotation.Retention
 import java.lang.^annotation.Documented
-import java.lang.^annotation.Target
 import java.lang.^annotation.Inherited
+import java.lang.^annotation.Repeatable
+import java.lang.^annotation.Retention
+import java.lang.^annotation.Target
 import javax.inject.Qualifier
 
 @Documented
@@ -92,4 +93,22 @@ annotation BuildImage {
     String value = ''
     String tag = ''
     boolean forcePull = false
+}
+
+@Documented
+@Retention(RUNTIME)
+@Target(TYPE)
+@Inherited
+annotation Environment {
+    EnvironmentEntry[] value = #[]
+}
+
+@Documented
+@Retention(RUNTIME)
+@Target(TYPE)
+@Inherited
+@Repeatable(Environment)
+annotation EnvironmentEntry {
+    String key = ''
+    String value = ''
 }
