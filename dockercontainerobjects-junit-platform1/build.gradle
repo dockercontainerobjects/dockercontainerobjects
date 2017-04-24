@@ -7,14 +7,14 @@
 
 dependencies {
     api project(':dockercontainerobjects-core')
-    api 'org.junit.jupiter:junit-jupiter-api'
+    api "org.junit.jupiter:junit-jupiter-api:${project.junitJupiterVersion}"
 
-    implementation 'org.eclipse.xtend:org.eclipse.xtend.lib'
-    implementation 'org.slf4j:slf4j-api'
+    implementation "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
+    implementation "org.slf4j:slf4j-api:${project.slf4jVersion}"
 
-    testImplementation 'junit:junit' // [2]
-    testImplementation 'org.junit.platform:junit-platform-runner' // [2]
+    testImplementation "junit:junit:${project.junitClassicVersion}" // [2]
+    testImplementation "org.junit.platform:junit-platform-runner:${project.junitPlatformVersion}" // [2]
 
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-    testRuntimeOnly 'ch.qos.logback:logback-classic' // [1]
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitJupiterVersion}"
+    testRuntimeOnly "ch.qos.logback:logback-classic:${project.logbackVersion}" // [1]
 }

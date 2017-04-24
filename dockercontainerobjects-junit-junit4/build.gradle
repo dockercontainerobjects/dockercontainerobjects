@@ -5,11 +5,11 @@
 
 dependencies {
     api project(':dockercontainerobjects-core')
-    api 'junit:junit'
+    api "junit:junit:${project.junitClassicVersion}"
 
-    implementation 'org.eclipse.xtend:org.eclipse.xtend.lib'
-    implementation 'org.slf4j:slf4j-api'
+    implementation "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
+    implementation "org.slf4j:slf4j-api:${project.slf4jVersion}"
 
-    testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
-    testRuntimeOnly 'ch.qos.logback:logback-classic' // [1]
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${project.junitVintageVersion}"
+    testRuntimeOnly "ch.qos.logback:logback-classic:${project.logbackVersion}" // [1]
 }
