@@ -6,7 +6,6 @@ buildscript {
     dependencies {
         classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:${bintrayPluginVersion}"
         classpath "com.netflix.nebula:gradle-resolution-rules-plugin:${nebulaResolutionRulesPluginVersion}"
-        classpath "com.netflix.nebula:nebula-dependency-recommender:${nebulaDependencyRecommenderPluginVersion}"
         classpath "com.netflix.nebula:nebula-project-plugin:${nebulaProjectPluginVersion}"
         classpath "com.netflix.nebula:nebula-release-plugin:${nebulaReleasePluginVersion}"
         classpath "net.ltgt.gradle:gradle-errorprone-plugin:${errorPronePluginVersion}"
@@ -24,7 +23,6 @@ allprojects {
 subprojects {
     apply plugin: 'java-library'
     apply plugin: 'nebula.maven-apache-license'
-    apply plugin: 'nebula.dependency-recommender'
     apply plugin: 'nebula.resolution-rules'
     apply plugin: 'net.ltgt.errorprone'
     apply plugin: 'org.junit.platform.gradle.plugin'
@@ -76,26 +74,6 @@ subprojects {
         }
         validator {
         }
-    }
-
-    dependencyRecommendations {
-        map recommendations: [
-                // Xtend
-                'org.eclipse.xtend:org.eclipse.xtend.lib': project.xtendVersion,
-                // Javax Inject
-                'javax.inject:javax.inject': project.javaxInjectVersion,
-                // Docker Java
-                'com.github.docker-java:docker-java': project.dockerJavaVersion,
-                // Logging: SLF4J + Logback
-                'org.slf4j:slf4j-api': project.slf4jVersion,
-                'ch.qos.logback:logback-classic': project.logbackVersion,
-                // JUnit
-                'junit:junit': project.junitClassicVersion,
-                'org.junit.platform:junit-platform-runner': project.junitPlatformVersion,
-                'org.junit.jupiter:junit-jupiter-api': project.junitJupiterVersion,
-                'org.junit.jupiter:junit-jupiter-engine': project.junitJupiterVersion,
-                'org.junit.vintage:junit-vintage-engine': project.junitVintageVersion,
-        ]
     }
 
     dependencies {

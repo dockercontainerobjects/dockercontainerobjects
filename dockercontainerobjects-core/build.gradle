@@ -6,16 +6,16 @@
 //     this dependency can be removed if only Gradle or JUnit Platform support is desired
 
 dependencies {
-    api 'com.github.docker-java:docker-java' // [1]
-    api 'javax.inject:javax.inject'
+    api "com.github.docker-java:docker-java:${project.dockerJavaVersion}" // [1]
+    api "javax.inject:javax.inject:${project.javaxInjectVersion}"
 
-    implementation 'org.eclipse.xtend:org.eclipse.xtend.lib'
-    implementation 'org.slf4j:slf4j-api'
+    implementation "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
+    implementation "org.slf4j:slf4j-api:${project.slf4jVersion}"
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'junit:junit' // [2]
-    testImplementation 'org.junit.platform:junit-platform-runner' // [2]
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitJupiterVersion}"
+    testImplementation "junit:junit:${project.junitClassicVersion}" // [2]
+    testImplementation "org.junit.platform:junit-platform-runner:${project.junitPlatformVersion}" // [2]
 
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-    testRuntimeOnly 'ch.qos.logback:logback-classic'
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitJupiterVersion}"
+    testRuntimeOnly "ch.qos.logback:logback-classic:${project.logbackVersion}"
 }
