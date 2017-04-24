@@ -14,6 +14,10 @@ import com.github.dockerjava.core.command.WaitContainerResultCallback
 import com.github.dockerjava.api.model.NetworkSettings
 import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.core.command.PullImageResultCallback
+import java.util.List
+import java.util.Optional
+import java.security.PrivilegedAction
+import java.security.AccessController
 
 class DockerClientExtensions {
 
@@ -47,9 +51,11 @@ class DockerClientExtensions {
             .exec
     }
 
-    static def createContainer(DockerClient dockerClient, String imageId) {
+    static def createContainer(DockerClient dockerClient, String imageId, Optional<List<String>> environment) {
         l.debug [ "Creating docker container from image '%s'" <<< imageId ]
-        val response = dockerClient.createContainerCmd(imageId).exec
+        val cmd = dockerClient.createContainerCmd(imageId)
+        environment.ifPresent[ cmd.withEnv(it) ]
+        val response = cmd.exec
         l.debug [ "Docker container from image '%s' created with id '%s'" <<< #[imageId, response.id] ]
         response
     }
@@ -117,13 +123,22 @@ class DockerClientExtensions {
     }
 
     static def inetAddress(NetworkSettings networkSettings) {
-        // TODO use system property java.net.preferIPv6Addresses to choose between IPv6 and IPv4
-        networkSettings.inet6Address ?: networkSettings.inet4Address
+        val PrivilegedAction<Boolean> action = [ Boolean.getBoolean("java.net.preferIPv6Addresses") ]
+        val preferIPv6Addresses =
+	        try {
+	        	AccessController.doPrivileged(action).booleanValue
+	        } catch (SecurityException e) {
+	        	false
+	        }
+		if (preferIPv6Addresses)
+			networkSettings.inet6Address ?: networkSettings.inet4Address
+		else
+    		networkSettings.inet4Address ?: networkSettings.inet6Address
     }
 
     static def <ADDR> ADDR inetAddressOfType(NetworkSettings networkSettings, Class<ADDR> type) {
         switch (type) {
-            case String: networkSettings.inetAddress.toString
+            case String: networkSettings.inetAddress.hostAddress
             case Inet4Address: networkSettings.inet4Address
             case Inet6Address: networkSettings.inet6Address
             case InetAddress: networkSettings.inetAddress
