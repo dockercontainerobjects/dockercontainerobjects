@@ -166,7 +166,7 @@ class MyContainerTest { //(1)
 
 ## Container Objects in tests
 
-Container Objects can be defined as class fields or instance fields.
+Container Objects can be defined as class fields or instance fields. (Only if using JUnit4 `@RunWidth` or JUnit5 `@ExtendsWith`)
 Class fields will be created and started before any test method is executed and stopped and removed after all test methods are executed.
 Instance fields will be created and started before every test method is executed and stopped and removed after the method finishes.
 
@@ -180,6 +180,17 @@ A link will be created from the containing container object to each of the conta
 Container objects can define methods annotated with any of `@BeforeCreating`, `@AfterCreated`, `@BeforeStarting`, `@AfterStarted`, `@BeforeStopping`, `@AfterStopped`, `@BeforeRemoving`, `@AfterRemoved`.
 Such methods will be invoked on each stage of the container creation lifecycle.
 Methods must be defined as instance methods, accepting no parameters and returning void.
+
+## Container configuration
+
+The annotation `@RegistryImage` is used to define the image that will be used to start the container.
+For example, if a container object class is annotated with `@RegistryImage("tomcat:jre8")` then the container will be based on the image `"tomcat:jre8"`.
+If the image is not found locally, or if the parameter `forcePull` is set to `true`, the image will be downloaded from the registry.
+If the image did not exist locally, and was pulled from the registry, and the parameter `autoRemove` is set to true, when the container is removed, the image will be removed. (unless there is another container depending on the image)
+
+The annotation `@EnvironmentEntry` can be used to specify environment paramenters. This annotation is repeatable, which means it can be applied multiple times to the container object class.
+For example, if a container object class is annotated with `@EnvironmentEntry(key="DEFAULT_USER", value="TEST")`, the environment entry `DEFAULT_USER=TEST` will be added to the container at start.
+If the `key` attribute is not set, the entry can be specified in the value, for example `@EnvironmentEntry("DEFAULT_USER=TEST")`.
 
 ## Injecting data inside the container object from docker
 
