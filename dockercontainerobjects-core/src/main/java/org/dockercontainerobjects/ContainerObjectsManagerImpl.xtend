@@ -1,6 +1,7 @@
 package org.dockercontainerobjects
 
 import static extension java.util.Optional.empty
+import static extension java.util.stream.Collectors.toList
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.createContainer
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inetAddressOfType
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inspectContainer
@@ -52,6 +53,7 @@ import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.model.NetworkSettings
 import com.github.dockerjava.api.exception.DockerException
+import org.dockercontainerobjects.annotations.Environment
 
 class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
@@ -212,8 +214,14 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
     }
 
     private def createContainer(Object containerInstance, ImageRegistrationInfo imageInfo) {
+        val containerType = containerInstance.class
+        // check for environment
+        val environment = containerType.getAnnotation(Environment)
+                .unsure
+                .map([ value.stream.map [ if (key.empty) value else key+"="+value ].collect(toList) ])
+
         containerInstance.invokeContainerLifecycleListeners(BeforeCreating)
-        val containerId = dockerClient.createContainer(imageInfo.id).id
+        val containerId = dockerClient.createContainer(imageInfo.id, environment).id
         containerInstance.updateFields(
             onInstance && ofType(String) && annotatedWith(Inject, ContainerId), constant(containerId))
         containerInstance.invokeContainerLifecycleListeners(AfterCreated)
