@@ -4,20 +4,24 @@ import static extension org.dockercontainerobjects.util.Loggers.debug
 import static extension org.dockercontainerobjects.util.Loggers.warn
 import static extension org.dockercontainerobjects.util.Strings.operator_tripleLessThan
 
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.io.File
 import java.net.InetAddress
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.UnknownHostException
-import org.slf4j.LoggerFactory
-import com.github.dockerjava.api.DockerClient
-import com.github.dockerjava.core.command.WaitContainerResultCallback
-import com.github.dockerjava.api.model.NetworkSettings
-import com.github.dockerjava.api.exception.NotFoundException
-import com.github.dockerjava.core.command.PullImageResultCallback
+import java.security.AccessController
+import java.security.PrivilegedAction
 import java.util.List
 import java.util.Optional
-import java.security.PrivilegedAction
-import java.security.AccessController
+import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.exception.NotFoundException
+import com.github.dockerjava.api.model.NetworkSettings
+import com.github.dockerjava.core.command.BuildImageResultCallback
+import com.github.dockerjava.core.command.PullImageResultCallback
+import com.github.dockerjava.core.command.WaitContainerResultCallback
+import org.slf4j.LoggerFactory
 
 class DockerClientExtensions {
 
@@ -51,6 +55,33 @@ class DockerClientExtensions {
             .exec
     }
 
+    static def String buildImage(DockerClient dockerClient, File dockerFileOrFolder, String imageTag, boolean forcePull) {
+        l.debug [ "Building docker image with '%s'" <<< dockerFileOrFolder ]
+        dockerClient.buildImageCmd(dockerFileOrFolder)
+            .withTag(imageTag)
+            .withPull(forcePull)
+            .exec(new BuildImageResultCallback)
+            .awaitImageId
+    }
+
+    static def String buildImage(DockerClient dockerClient, byte[] dockerTar, String imageTag, boolean forcePull) {
+        val in = new ByteArrayInputStream(dockerTar)
+        try {
+            dockerClient.buildImage(in, imageTag, forcePull)
+        } finally {
+            in.close
+        }
+    }
+
+    static def String buildImage(DockerClient dockerClient, InputStream dockerTar, String imageTag, boolean forcePull) {
+        l.debug [ "Building docker image from tar" ]
+        dockerClient.buildImageCmd(dockerTar)
+            .withTag(imageTag)
+            .withPull(forcePull)
+            .exec(new BuildImageResultCallback)
+            .awaitImageId
+    }
+
     static def createContainer(DockerClient dockerClient, String imageId, Optional<List<String>> environment) {
         l.debug [ "Creating docker container from image '%s'" <<< imageId ]
         val cmd = dockerClient.createContainerCmd(imageId)
@@ -63,7 +94,7 @@ class DockerClientExtensions {
     static def startContainer(DockerClient dockerClient, String containerId) {
         l.debug [ "Starting docker container with id '%s'" <<< containerId ]
         dockerClient.startContainerCmd(containerId).exec
-        l.debug [ "Docker container with id '%s' started" <<< #[containerId] ]
+        l.debug [ "Docker container with id '%s' started" <<< containerId ]
         val response = dockerClient.inspectContainer(containerId)
         if (response.state.running != Boolean.TRUE)
             throw new IllegalStateException(
@@ -125,15 +156,15 @@ class DockerClientExtensions {
     static def inetAddress(NetworkSettings networkSettings) {
         val PrivilegedAction<Boolean> action = [ Boolean.getBoolean("java.net.preferIPv6Addresses") ]
         val preferIPv6Addresses =
-	        try {
-	        	AccessController.doPrivileged(action).booleanValue
-	        } catch (SecurityException e) {
-	        	false
-	        }
-		if (preferIPv6Addresses)
-			networkSettings.inet6Address ?: networkSettings.inet4Address
-		else
-    		networkSettings.inet4Address ?: networkSettings.inet6Address
+            try {
+                AccessController.doPrivileged(action).booleanValue
+            } catch (SecurityException e) {
+                false
+            }
+        if (preferIPv6Addresses)
+            networkSettings.inet6Address ?: networkSettings.inet4Address
+        else
+            networkSettings.inet4Address ?: networkSettings.inet6Address
     }
 
     static def <ADDR> ADDR inetAddressOfType(NetworkSettings networkSettings, Class<ADDR> type) {

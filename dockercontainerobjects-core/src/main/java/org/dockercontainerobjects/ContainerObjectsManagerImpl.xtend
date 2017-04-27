@@ -2,6 +2,8 @@ package org.dockercontainerobjects
 
 import static extension java.util.Optional.empty
 import static extension java.util.stream.Collectors.toList
+import static extension org.apache.commons.io.IOUtils.toByteArray
+import static extension org.dockercontainerobjects.docker.DockerClientExtensions.buildImage
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.createContainer
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inetAddressOfType
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inspectContainer
@@ -13,6 +15,8 @@ import static extension org.dockercontainerobjects.docker.DockerClientExtensions
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.removeImage
 import static extension org.dockercontainerobjects.util.AccessibleObjects.annotatedWith
 import static extension org.dockercontainerobjects.util.AccessibleObjects.instantiate
+import static extension org.dockercontainerobjects.util.CompressExtensions.buildTARGZ
+import static extension org.dockercontainerobjects.util.CompressExtensions.withEntry
 import static extension org.dockercontainerobjects.util.Fields.ofType
 import static extension org.dockercontainerobjects.util.Fields.updateFields
 import static extension org.dockercontainerobjects.util.Functions.constant
@@ -29,33 +33,55 @@ import static extension org.dockercontainerobjects.util.Predicates.operator_and
 import static extension org.dockercontainerobjects.util.Strings.operator_tripleLessThan
 
 import java.lang.^annotation.Annotation
+import java.io.File
+import java.io.InputStream
 import java.io.IOException
 import java.net.InetAddress
+import java.net.URI
+import java.net.URL
+import java.util.UUID
 import java.util.stream.Collectors
 import javax.inject.Inject
-import org.dockercontainerobjects.ContainerObjectsEnvironment.ImageRegistrationInfo
+import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.exception.DockerException
+import com.github.dockerjava.api.exception.NotFoundException
+import com.github.dockerjava.api.model.NetworkSettings
 import org.dockercontainerobjects.ContainerObjectsEnvironment.ContainerRegistrationInfo
+import org.dockercontainerobjects.ContainerObjectsEnvironment.ImageRegistrationInfo
 import org.dockercontainerobjects.ContainerObjectsEnvironment.RegistrationInfo
 import org.dockercontainerobjects.annotations.AfterCreated
+import org.dockercontainerobjects.annotations.AfterRemoved
 import org.dockercontainerobjects.annotations.AfterStarted
 import org.dockercontainerobjects.annotations.AfterStopped
-import org.dockercontainerobjects.annotations.AfterRemoved
 import org.dockercontainerobjects.annotations.BeforeCreating
+import org.dockercontainerobjects.annotations.BeforeRemoving
 import org.dockercontainerobjects.annotations.BeforeStarting
 import org.dockercontainerobjects.annotations.BeforeStopping
-import org.dockercontainerobjects.annotations.BeforeRemoving
 import org.dockercontainerobjects.annotations.BuildImage
 import org.dockercontainerobjects.annotations.ContainerAddress
 import org.dockercontainerobjects.annotations.ContainerId
+import org.dockercontainerobjects.annotations.Environment
 import org.dockercontainerobjects.annotations.RegistryImage
 import org.slf4j.LoggerFactory
-import com.github.dockerjava.api.DockerClient
-import com.github.dockerjava.api.exception.NotFoundException
-import com.github.dockerjava.api.model.NetworkSettings
-import com.github.dockerjava.api.exception.DockerException
-import org.dockercontainerobjects.annotations.Environment
 
 class ContainerObjectsManagerImpl implements ContainerObjectsManager {
+
+    public static val IMAGE_TAG_DYNAMIC_PLACEHOLDER = "*"
+    private static val IMAGE_TAG_DEFAULT_TEMPLATE = "%s_%s:latest"
+    private static val char UNDERSCORE = '_'
+
+    public static val SCHEME_PATH_SEPARATOR = "://"
+
+    public static val SCHEME_CLASSPATH = "classpath"
+    public static val SCHEME_CLASSPATH_PREFIX = SCHEME_CLASSPATH+SCHEME_PATH_SEPARATOR
+    public static val SCHEME_FILE = "file"
+    public static val SCHEME_FILE_PREFIX = SCHEME_FILE+SCHEME_PATH_SEPARATOR
+    public static val SCHEME_HTTP = "http"
+    public static val SCHEME_HTTP_PREFIX = SCHEME_HTTP+SCHEME_PATH_SEPARATOR
+    public static val SCHEME_HTTPS = "https"
+    public static val SCHEME_HTTPS_PREFIX = SCHEME_HTTPS+SCHEME_PATH_SEPARATOR
+
+    public static val DOCKERFILE_DEFAULT_NAME = "Dockerfile"
 
     private static val l = LoggerFactory.getLogger(ContainerObjectsManagerImpl)
 
@@ -146,8 +172,8 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
     private def prepareImage(Object containerInstance) {
         val containerType = containerInstance.class
+        l.debug [ "preparing image for container class '%s'" <<< containerType.simpleName ]
         // check for image from annotation or method
-        // TODO check for build from annotation or method
         val registryImageAnnotation = containerType.getAnnotation(RegistryImage).unsure
         val registryImageMethods = containerType.findMethods(expectingNoParameters && annotatedWith(RegistryImage))
                 .stream
@@ -163,10 +189,11 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
         options += buildImageMethods.size
         if (options != 1)
             throw new IllegalArgumentException(
-                "Container class '%s' has more than one way to define the image to use" <<< containerType.simpleName);
+                "Container class '%s' has more than one way to define the image to use" <<< containerType.simpleName)
         var String imageId = null
         var boolean forcePull = false
         var boolean autoRemove = false
+        var boolean imageBuilt = false
 
         if (registryImageAnnotation.present) {
             val registryImageAnnotationValue = registryImageAnnotation.get
@@ -182,7 +209,7 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
             if (!registryImageMethod.isOfReturnType(String))
                 throw new IllegalArgumentException(
                     "Method '%s' on class '%s' must return '%s' to be used to define the image to use" <<<
-                        #[registryImageMethod, containerType.simpleName, String.simpleName]);
+                        #[registryImageMethod, containerType.simpleName, String.simpleName])
             val registryImageAnnotationValue = registryImageMethod.getAnnotation(RegistryImage)
             imageId = registryImageAnnotationValue.value
             if (imageId !== null && !imageId.empty)
@@ -196,16 +223,74 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
                         #[registryImageMethod, containerType.simpleName])
             forcePull = registryImageAnnotationValue.forcePull
             autoRemove = registryImageAnnotationValue.autoRemove
+        } else {
+            var Object imageRef = null
+            var String imageTag = null
+            if (buildImageAnnotation.present) {
+                val buildImageAnnotationValue = buildImageAnnotation.get
+                imageRef = buildImageAnnotationValue.value
+                if (imageRef === null)
+                    throw new IllegalArgumentException(
+                        "Annotation '%s' on class '%s' must define a non-empty value pointing to a Dockerfile" <<<
+                            #[BuildImage.simpleName, containerType.simpleName])
+                imageTag = buildImageAnnotationValue.tag
+            } else if (!buildImageMethods.empty) {
+                val buildImageMethod = buildImageMethods.get(0)
+                #[String, URI, URL, File, InputStream].stream.filter [ buildImageMethod.isOfReturnType(it) ].findAny.orElseThrow [
+                    new IllegalArgumentException(
+                        "Method '%s' on class '%s' must return a valid type pointing to a Dockerfile" <<<
+                            #[buildImageMethod, containerType.simpleName])
+                ]
+                imageRef = buildImageMethod.call(containerInstance)
+                if (imageRef === null)
+                    throw new IllegalArgumentException(
+                        "Method '%s' on class '%s' must return a non-null value to be used to define the image to use" <<<
+                            #[buildImageMethod, containerType.simpleName])
+            }
+            if (imageRef instanceof String) {
+                val imageRefStr = imageRef
+                if (imageRef.startsWith(SCHEME_CLASSPATH_PREFIX))
+                    imageRef = containerType.getResource(imageRefStr.substring(SCHEME_CLASSPATH_PREFIX.length))
+                else if (imageRefStr.startsWith(SCHEME_FILE_PREFIX))
+                    imageRef = URI.create(imageRefStr.substring(SCHEME_FILE_PREFIX.length))
+                else if (imageRefStr.startsWith(SCHEME_HTTP_PREFIX))
+                    imageRef = URI.create(imageRefStr.substring(SCHEME_HTTP_PREFIX.length))
+                else if (imageRefStr.startsWith(SCHEME_HTTPS_PREFIX))
+                    imageRef = URI.create(imageRefStr.substring(SCHEME_HTTPS_PREFIX.length))
+            }
+            if (imageTag === null || imageTag.empty)
+                imageTag = defaultImageTag(containerType)
+            if (imageTag.contains(IMAGE_TAG_DYNAMIC_PLACEHOLDER))
+                imageTag = imageTag.replace(IMAGE_TAG_DYNAMIC_PLACEHOLDER, UUID.randomUUID.toString)
+            val cleanImageTag = imageTag.toLowerCase
+            l.debug [ "image for container class '%s' will be build and tagged as '%s'" <<< #[containerType.simpleName, cleanImageTag] ]
+            val generatedImageId =
+                if (imageRef instanceof File)
+                    dockerClient.buildImage(imageRef, cleanImageTag, forcePull)
+                else {
+                    val tar =
+                        if (imageRef instanceof InputStream)
+                            dockerfileAsTARGZ(imageRef)
+                        else if (imageRef instanceof URI)
+                            dockerfileAsTARGZ(imageRef)
+                        else if (imageRef instanceof URL)
+                            dockerfileAsTARGZ(imageRef)
+                    dockerClient.buildImage(tar, cleanImageTag, forcePull)
+                }
+            l.debug [ "image for container class '%s' build with id '%s' and tagged as '%s'" <<< #[containerType.simpleName, generatedImageId, cleanImageTag] ]
+            imageId = cleanImageTag
+            autoRemove = true
+            imageBuilt = true
         }
 
-        val imagePresent =
+        val imagePresent = imageBuilt ||
             try {
                 imageId = dockerClient.inspectImage(imageId).id
                 true
             } catch (NotFoundException ex) {
                 false
             }
-        if (imagePresent) autoRemove = false
+        if (imagePresent && !imageBuilt) autoRemove = false
         if (forcePull || !imagePresent) {
             imageId = dockerClient.pullImage(imageId).id
         }
@@ -275,5 +360,43 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
         l.debug [ "Invoking life-cycle event '%s'" <<< annotationType.simpleName ]
         containerInstance.invokeInstanceMethods(
                 onInstance && expectingNoParameters && annotatedWith(annotationType), empty)
+    }
+
+    private static def dockerfileAsTARGZ(InputStream dockerfile) {
+        buildTARGZ [
+            withEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.toByteArray)
+        ]
+    }
+
+    private static def dockerfileAsTARGZ(URL dockerfile) {
+        buildTARGZ [
+            withEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.toByteArray)
+        ]
+    }
+
+    private static def dockerfileAsTARGZ(URI dockerfile) {
+        buildTARGZ [
+            withEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.toByteArray)
+        ]
+    }
+
+    private static def defaultImageTag(Class<?> containerType) {
+        String.format(IMAGE_TAG_DEFAULT_TEMPLATE, containerType.simpleName.toLowerWithUnderscoreCase, IMAGE_TAG_DYNAMIC_PLACEHOLDER)
+    }
+
+    private static def toLowerWithUnderscoreCase(String id) {
+        val result = new StringBuilder()
+        val chars = id.toCharArray
+        for (var index = 0; index < chars.length; index++) {
+            val ch = chars.get(index)
+            if (Character.isUpperCase(ch)) {
+                if (index > 0)
+                    result.append(UNDERSCORE)
+                val char lower = Character.toLowerCase(ch)
+                result.append(lower)
+            } else
+                result.append(ch)
+        }
+        result.toString
     }
 }
