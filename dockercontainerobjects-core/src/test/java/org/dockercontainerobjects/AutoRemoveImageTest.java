@@ -17,8 +17,8 @@ import org.junit.runner.RunWith;
 @Tag("docker")
 public class AutoRemoveImageTest extends ContainerObjectManagerBasedTest {
 
-    public static final String AUTOREMOVABLE_IMAGE_ID = "tomcat:jre7";
-    public static final String EXISTING_IMAGE_ID = "tomcat:jre8";
+    static final String AUTOREMOVABLE_IMAGE_ID = "tomcat:jre7";
+    static final String EXISTING_IMAGE_ID = "tomcat:jre8";
 
     @Test
     @DisplayName("Images marked as auto-remove should be removed after all containers destroyed")
@@ -45,7 +45,7 @@ public class AutoRemoveImageTest extends ContainerObjectManagerBasedTest {
     }
 
     @Test
-    @DisplayName("Images marked as auto-remove cannot be removed if they exited previously")
+    @DisplayName("Images marked as auto-remove cannot be removed if they existed previously")
     void preexistingImage() {
         DockerClientExtensions.pullImage(env.getDockerClient(), EXISTING_IMAGE_ID);
         SimpleContainerWithExistingImage container = manager.create(SimpleContainerWithExistingImage.class);
