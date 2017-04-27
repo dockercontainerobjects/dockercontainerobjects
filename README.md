@@ -90,7 +90,7 @@ testCompile "org.dockecontainerobjects:dockercontainerobjects-junit-junit4:${doc
 Or download the required JARs:
 
 [![Latest Version](https://api.bintray.com/packages/dockercontainerobjects/maven/dockercontainerobjects-core/images/download.svg) ](https://bintray.com/dockercontainerobjects/maven/dockercontainerobjects-core/_latestVersion)
-[![Latest Version](https://api.bintray.com/packages/dockercontainerobjects/maven/dockercontainerobjects-junit-platform1/images/download.svg) ](https://bintray.com/dockercontainerobjects/maven/dockercontainerobjects-junit-platform1/_latestVersion)
+[![Latest Version](https://api.bintray.com/packages/dockercontainerobjects/maven/dockercontainerobjects-junit-junit4/images/download.svg) ](https://bintray.com/dockercontainerobjects/maven/dockercontainerobjects-junit-junit4/_latestVersion)
 
 #### JUnit 4 runner
 
@@ -183,12 +183,45 @@ Methods must be defined as instance methods, accepting no parameters and returni
 
 ## Container configuration
 
-The annotation `@RegistryImage` is used to define the image that will be used to start the container.
+### Using existing images
+
+The annotation `@RegistryImage` can be applied to the class to define the image that will be used to start the container.
 For example, if a container object class is annotated with `@RegistryImage("tomcat:jre8")` then the container will be based on the image `"tomcat:jre8"`.
 If the image is not found locally, or if the parameter `forcePull` is set to `true`, the image will be downloaded from the registry.
-If the image did not exist locally, and was pulled from the registry, and the parameter `autoRemove` is set to true, when the container is removed, the image will be removed. (unless there is another container depending on the image)
+If the image did not exist locally, and was pulled from the registry, and the parameter `autoRemove` is set to true, when the container is removed, the image will be removed.
+(unless there is another container depending on the image)
 
-The annotation `@EnvironmentEntry` can be used to specify environment paramenters. This annotation is repeatable, which means it can be applied multiple times to the container object class.
+The annotation `@RegistryImage` can also be applied to a method.
+In that case the `value` attribute will be ignored, and the result of invoking the method will be used instead.
+The method must be defined as expecting no parameters and returning a `String`.
+The result of the method will be used as the image to instantiate.
+The annotation parameters `forcePull` and `autoRemove` will be read and used in the same way as if the annotation were applied to the class.
+
+### Building new images
+
+The annotation `@BuildImage` can be applied to the class to define the location of a Dockerfile to be used to build a new image for the container object to be created.
+For example, if a container object class is annotated with `@BuildImage("classpath:///service/MyServiceDockerfile")`, a dockerfile will be looked in the specified location in the classpath.
+The protocols `file:`, `http:`, `https:` and `classpath:` are currently supported.
+For `classpath:`, `http:` and `https:`, the Dockerfile will be downloaded and the image will be created from the dockerfile only (no relative resources will be added).
+For `file:`, the value could be a reference to a file or to a folder.
+In that case, resources relative to the Dockerfile mentioned on it will be added to the image.
+
+The annotation also has the attributes `imageTag` and `forcePull`.
+The `imageTag` attribute can be used to specify a name for the image to be generated.
+If the `imageTag` contains an `*`, its position on the name will be substituted by a random `UUID` value.
+The `forcePull` attribute is used to force docker to try to download a new copy of the base image even if a new copy is downloaded.
+All images generated with `@BuildImage` annotations are auto removables. They will be removed after the container object is destroyed.
+
+The annotation `@BuildImage` can also be applied to a method.
+In that case the value attribute will be ignored and the result of invoking the method will be used instead.
+The method must be defined as expecting no parameters and returning either `String`, `URL`, `URI` or `InputStream`.
+For the types `String`, `URL` or `URI`, it will be assumed that the value points to the Dockerfile.
+For the type `InputStream`, it will be assumed that the content of the `InputStream` is the Dockerfile.
+
+### Other configuration options
+
+The annotation `@EnvironmentEntry` can be used to specify environment paramenters.
+This annotation is repeatable, which means it can be applied multiple times to the container object class.
 For example, if a container object class is annotated with `@EnvironmentEntry(key="DEFAULT_USER", value="TEST")`, the environment entry `DEFAULT_USER=TEST` will be added to the container at start.
 If the `key` attribute is not set, the entry can be specified in the value, for example `@EnvironmentEntry("DEFAULT_USER=TEST")`.
 
