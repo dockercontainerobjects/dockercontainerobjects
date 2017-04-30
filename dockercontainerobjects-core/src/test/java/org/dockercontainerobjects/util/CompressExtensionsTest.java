@@ -39,7 +39,7 @@ public class CompressExtensionsTest {
     void allArgsRequiredForEntryCreation() {
         assertThrows(NullPointerException.class, () -> withEntry(null, TEST_FILENAME, new byte[]{}));
         assertThrows(NullPointerException.class, () -> withEntry(new TarArchiveOutputStream(new ByteArrayOutputStream()), null, new byte[]{}));
-        assertThrows(NullPointerException.class, () -> withEntry(new TarArchiveOutputStream(new ByteArrayOutputStream()), TEST_FILENAME, null));
+        assertThrows(NullPointerException.class, () -> withEntry(new TarArchiveOutputStream(new ByteArrayOutputStream()), TEST_FILENAME, (byte[])null));
     }
 
     @Test

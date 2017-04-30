@@ -112,3 +112,21 @@ annotation EnvironmentEntry {
     String key = ''
     String value = ''
 }
+
+@Documented
+@Retention(RUNTIME)
+@Target(#[TYPE, METHOD])
+@Inherited
+annotation BuildImageContent {
+    BuildImageContentEntry[] value = #[]
+}
+
+@Documented
+@Retention(RUNTIME)
+@Target(#[TYPE, METHOD])
+@Inherited
+@Repeatable(BuildImageContent)
+annotation BuildImageContentEntry {
+    String name = ''
+    String value = ''
+}

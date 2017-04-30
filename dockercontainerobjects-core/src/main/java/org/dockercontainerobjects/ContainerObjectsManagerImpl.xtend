@@ -2,7 +2,6 @@ package org.dockercontainerobjects
 
 import static extension java.util.Optional.empty
 import static extension java.util.stream.Collectors.toList
-import static extension org.apache.commons.io.IOUtils.toByteArray
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.buildImage
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.createContainer
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inetAddressOfType
@@ -39,6 +38,8 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL
+import java.util.HashMap
+import java.util.Map
 import java.util.UUID
 import java.util.stream.Collectors
 import javax.inject.Inject
@@ -46,6 +47,7 @@ import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.exception.DockerException
 import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.model.NetworkSettings
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.dockercontainerobjects.ContainerObjectsEnvironment.ContainerRegistrationInfo
 import org.dockercontainerobjects.ContainerObjectsEnvironment.ImageRegistrationInfo
 import org.dockercontainerobjects.ContainerObjectsEnvironment.RegistrationInfo
@@ -58,6 +60,8 @@ import org.dockercontainerobjects.annotations.BeforeRemoving
 import org.dockercontainerobjects.annotations.BeforeStarting
 import org.dockercontainerobjects.annotations.BeforeStopping
 import org.dockercontainerobjects.annotations.BuildImage
+import org.dockercontainerobjects.annotations.BuildImageContent
+import org.dockercontainerobjects.annotations.BuildImageContentEntry
 import org.dockercontainerobjects.annotations.ContainerAddress
 import org.dockercontainerobjects.annotations.ContainerId
 import org.dockercontainerobjects.annotations.Environment
@@ -247,34 +251,33 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
                         "Method '%s' on class '%s' must return a non-null value to be used to define the image to use" <<<
                             #[buildImageMethod, containerType.simpleName])
             }
-            if (imageRef instanceof String) {
-                val imageRefStr = imageRef
-                if (imageRef.startsWith(SCHEME_CLASSPATH_PREFIX))
-                    imageRef = containerType.getResource(imageRefStr.substring(SCHEME_CLASSPATH_PREFIX.length))
-                else if (imageRefStr.startsWith(SCHEME_FILE_PREFIX))
-                    imageRef = URI.create(imageRefStr.substring(SCHEME_FILE_PREFIX.length))
-                else if (imageRefStr.startsWith(SCHEME_HTTP_PREFIX))
-                    imageRef = URI.create(imageRefStr.substring(SCHEME_HTTP_PREFIX.length))
-                else if (imageRefStr.startsWith(SCHEME_HTTPS_PREFIX))
-                    imageRef = URI.create(imageRefStr.substring(SCHEME_HTTPS_PREFIX.length))
-            }
             if (imageTag === null || imageTag.empty)
                 imageTag = defaultImageTag(containerType)
             if (imageTag.contains(IMAGE_TAG_DYNAMIC_PLACEHOLDER))
                 imageTag = imageTag.replace(IMAGE_TAG_DYNAMIC_PLACEHOLDER, UUID.randomUUID.toString)
+            val Map<String, Object> content = new HashMap
+            containerType.getAnnotationsByType(BuildImageContentEntry).stream.forEach [
+                l.debug [ "Adding entry name '%s' with content '%s'" <<< #[name, value] ]
+                content.put(name, value.normalize(containerType))
+            ]
+            containerType.findMethods(expectingNoParameters && annotatedWith(BuildImageContent))
+                    .stream
+                    .forEach [
+                if (!isOfReturnType(Map))
+                    throw new IllegalArgumentException(
+                            "Method '%s' on class '%s' must return a Map to be used to define the image to use" <<<
+                                    #[it, containerType.simpleName])
+                val newContent = call(containerInstance) as Map<String, Object>
+                if (newContent !== null) content.putAll(newContent)
+            ]
+
             val cleanImageTag = imageTag.toLowerCase
             l.debug [ "image for container class '%s' will be build and tagged as '%s'" <<< #[containerType.simpleName, cleanImageTag] ]
             val generatedImageId =
                 if (imageRef instanceof File)
                     dockerClient.buildImage(imageRef, cleanImageTag, forcePull)
                 else {
-                    val tar =
-                        if (imageRef instanceof InputStream)
-                            dockerfileAsTARGZ(imageRef)
-                        else if (imageRef instanceof URI)
-                            dockerfileAsTARGZ(imageRef)
-                        else if (imageRef instanceof URL)
-                            dockerfileAsTARGZ(imageRef)
+                    val tar = buildDockerTAR(imageRef, content, containerType)
                     dockerClient.buildImage(tar, cleanImageTag, forcePull)
                 }
             l.debug [ "image for container class '%s' build with id '%s' and tagged as '%s'" <<< #[containerType.simpleName, generatedImageId, cleanImageTag] ]
@@ -362,22 +365,42 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
                 onInstance && expectingNoParameters && annotatedWith(annotationType), empty)
     }
 
-    private static def dockerfileAsTARGZ(InputStream dockerfile) {
+    private static def buildDockerTAR(Object dockerfile, Map<String, Object> content, Class<?> containerType) {
         buildTARGZ [
-            withEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.toByteArray)
+            withGenericEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.normalize(containerType))
+            if (content !== null)
+                content.forEach [k, v| withGenericEntry(k, v.normalize(containerType)) ]
         ]
     }
 
-    private static def dockerfileAsTARGZ(URL dockerfile) {
-        buildTARGZ [
-            withEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.toByteArray)
-        ]
+    private static def withGenericEntry(TarArchiveOutputStream out, String filename, Object content) throws IOException {
+        l.debug [ "Adding TAR entry with name '%s' and content of type '%s'" <<< #[filename, content.class.simpleName] ]
+        switch (content) {
+            URL:
+                out.withEntry(filename, content)
+            URI:
+                out.withEntry(filename, content)
+            InputStream:
+                out.withEntry(filename, content)
+            byte[]:
+                out.withEntry(filename, content)
+            default:
+                throw new IllegalArgumentException("Content is not of a supported type")
+        }
     }
 
-    private static def dockerfileAsTARGZ(URI dockerfile) {
-        buildTARGZ [
-            withEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.toByteArray)
-        ]
+    private static def normalize(Object resource, Class<?> loader) {
+        if (resource instanceof String) {
+            if (resource.startsWith(SCHEME_CLASSPATH_PREFIX))
+                return loader.getResource(resource.substring(SCHEME_CLASSPATH_PREFIX.length))
+            if (resource.startsWith(SCHEME_FILE_PREFIX))
+                return URI.create(resource.substring(SCHEME_FILE_PREFIX.length))
+            if (resource.startsWith(SCHEME_HTTP_PREFIX))
+                return URI.create(resource.substring(SCHEME_HTTP_PREFIX.length))
+            if (resource.startsWith(SCHEME_HTTPS_PREFIX))
+                return URI.create(resource.substring(SCHEME_HTTPS_PREFIX.length))
+        }
+        resource
     }
 
     private static def defaultImageTag(Class<?> containerType) {

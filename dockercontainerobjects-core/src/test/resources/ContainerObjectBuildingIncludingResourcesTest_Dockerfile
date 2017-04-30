@@ -1,0 +1,2 @@
+FROM tomcat:jre8
+COPY sample.html /usr/local/tomcat/webapps/ROOT/
