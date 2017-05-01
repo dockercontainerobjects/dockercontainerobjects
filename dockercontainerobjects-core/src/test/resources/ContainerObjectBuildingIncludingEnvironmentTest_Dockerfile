@@ -1,0 +1,2 @@
+FROM tomcat:jre8
+CMD printenv TEXT > /usr/local/tomcat/webapps/ROOT/sample.txt && catalina.sh run

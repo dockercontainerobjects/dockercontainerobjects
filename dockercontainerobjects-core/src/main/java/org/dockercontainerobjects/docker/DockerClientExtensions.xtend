@@ -14,7 +14,6 @@ import java.net.UnknownHostException
 import java.security.AccessController
 import java.security.PrivilegedAction
 import java.util.List
-import java.util.Optional
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.model.NetworkSettings
@@ -82,10 +81,11 @@ class DockerClientExtensions {
             .awaitImageId
     }
 
-    static def createContainer(DockerClient dockerClient, String imageId, Optional<List<String>> environment) {
+    static def createContainer(DockerClient dockerClient, String imageId, List<String> environment) {
         l.debug [ "Creating docker container from image '%s'" <<< imageId ]
         val cmd = dockerClient.createContainerCmd(imageId)
-        environment.ifPresent[ cmd.withEnv(it) ]
+        if (environment !== null && !environment.empty)
+            cmd.withEnv(environment)
         val response = cmd.exec
         l.debug [ "Docker container from image '%s' created with id '%s'" <<< #[imageId, response.id] ]
         response

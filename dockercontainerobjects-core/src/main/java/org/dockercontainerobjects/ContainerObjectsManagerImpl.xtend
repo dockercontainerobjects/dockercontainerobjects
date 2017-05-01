@@ -1,5 +1,6 @@
 package org.dockercontainerobjects
 
+import static extension java.util.Arrays.stream
 import static extension java.util.Optional.empty
 import static extension java.util.stream.Collectors.toList
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.buildImage
@@ -65,6 +66,7 @@ import org.dockercontainerobjects.annotations.BuildImageContentEntry
 import org.dockercontainerobjects.annotations.ContainerAddress
 import org.dockercontainerobjects.annotations.ContainerId
 import org.dockercontainerobjects.annotations.Environment
+import org.dockercontainerobjects.annotations.EnvironmentEntry
 import org.dockercontainerobjects.annotations.RegistryImage
 import org.slf4j.LoggerFactory
 
@@ -304,9 +306,8 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
     private def createContainer(Object containerInstance, ImageRegistrationInfo imageInfo) {
         val containerType = containerInstance.class
         // check for environment
-        val environment = containerType.getAnnotation(Environment)
-                .unsure
-                .map([ value.stream.map [ if (key.empty) value else key+"="+value ].collect(toList) ])
+        val environment = containerType.getAnnotationsByType(EnvironmentEntry)
+                .stream.map [ if (key.empty) value else key+"="+value ].collect(toList)
 
         containerInstance.invokeContainerLifecycleListeners(BeforeCreating)
         val containerId = dockerClient.createContainer(imageInfo.id, environment).id
