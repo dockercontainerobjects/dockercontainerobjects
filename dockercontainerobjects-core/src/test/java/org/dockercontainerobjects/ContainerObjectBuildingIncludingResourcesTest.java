@@ -21,7 +21,7 @@ public class ContainerObjectBuildingIncludingResourcesTest extends WebContainerO
     static final String TEST_DOCKERFILE_PATH = "/ContainerObjectBuildingIncludingResourcesTest_Dockerfile";
     static final String TEST_DOCKERFILE_URL = "classpath://"+TEST_DOCKERFILE_PATH;
 
-    static final String TEST_CONTENT_ENTRY_NAME="sample.html";
+    static final String TEST_CONTENT_ENTRY_NAME = "sample.html";
     static final String TEST_CONTENT_ENTRY_URL = "classpath:///"+TEST_CONTENT_ENTRY_NAME;
 
     @Test

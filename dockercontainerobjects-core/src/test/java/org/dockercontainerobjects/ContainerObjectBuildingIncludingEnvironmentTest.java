@@ -21,7 +21,7 @@ public class ContainerObjectBuildingIncludingEnvironmentTest extends WebContaine
     static final String TEST_DOCKERFILE_PATH = "/ContainerObjectBuildingIncludingEnvironmentTest_Dockerfile";
     static final String TEST_DOCKERFILE_URL = "classpath://"+TEST_DOCKERFILE_PATH;
 
-    static final String TEST_ENV_ENTRY_KEY="TEXT";
+    static final String TEST_ENV_ENTRY_NAME = "TEXT";
     static final String TEST_ENV_ENTRY_VALUE = "this is a test";
 
     @Test
@@ -44,19 +44,19 @@ public class ContainerObjectBuildingIncludingEnvironmentTest extends WebContaine
     }
 
     @BuildImage(TEST_DOCKERFILE_URL)
-    @EnvironmentEntry(key=TEST_ENV_ENTRY_KEY, value=TEST_ENV_ENTRY_VALUE)
+    @EnvironmentEntry(name=TEST_ENV_ENTRY_NAME, value=TEST_ENV_ENTRY_VALUE)
     public static class ContainerEnvironmentProvidedByClassAnnotation {
         // nothing needed
     }
 
     @BuildImage(TEST_DOCKERFILE_URL)
-    @EnvironmentEntry(key=TEST_ENV_ENTRY_KEY, value=TEST_ENV_ENTRY_VALUE)
+    @EnvironmentEntry(name=TEST_ENV_ENTRY_NAME, value=TEST_ENV_ENTRY_VALUE)
     public static class ContainerEnvironmentProvidedByMethod {
 
         @Environment
         protected Map<String, String> environment() {
             Map<String, String> env = new HashMap<>();
-            env.put(TEST_ENV_ENTRY_KEY, TEST_ENV_ENTRY_VALUE);
+            env.put(TEST_ENV_ENTRY_NAME, TEST_ENV_ENTRY_VALUE);
             return env;
         }
     }

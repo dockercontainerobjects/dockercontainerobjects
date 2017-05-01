@@ -109,7 +109,7 @@ annotation Environment {
 @Inherited
 @Repeatable(Environment)
 annotation EnvironmentEntry {
-    String key = ''
+    String name = ''
     String value = ''
 }
 

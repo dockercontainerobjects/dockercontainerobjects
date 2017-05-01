@@ -312,7 +312,7 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
         // check for environment defined as class annotations
         environment.addAll(
                 containerType.getAnnotationsByType(EnvironmentEntry)
-                    .stream.map [ if (key.empty) value else key+"="+value ].collect(toList))
+                    .stream.map [ if (name.empty) value else name+"="+value ].collect(toList))
         // check for environment defined as methods
         containerType.findMethods(expectingNoParameters && annotatedWith(Environment))
                 .stream
