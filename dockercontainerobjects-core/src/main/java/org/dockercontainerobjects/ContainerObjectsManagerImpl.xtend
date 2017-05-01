@@ -391,8 +391,12 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
     private static def normalize(Object resource, Class<?> loader) {
         if (resource instanceof String) {
-            if (resource.startsWith(SCHEME_CLASSPATH_PREFIX))
-                return loader.getResource(resource.substring(SCHEME_CLASSPATH_PREFIX.length))
+            if (resource.startsWith(SCHEME_CLASSPATH_PREFIX)) {
+                val result = loader.getResource(resource.substring(SCHEME_CLASSPATH_PREFIX.length))
+                if (result === null)
+                    throw new IllegalArgumentException("Resource not found: "+resource)
+                return result
+            }
             if (resource.startsWith(SCHEME_FILE_PREFIX))
                 return URI.create(resource.substring(SCHEME_FILE_PREFIX.length))
             if (resource.startsWith(SCHEME_HTTP_PREFIX))
