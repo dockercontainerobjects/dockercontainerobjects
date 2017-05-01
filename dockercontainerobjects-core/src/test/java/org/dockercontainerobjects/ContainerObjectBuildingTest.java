@@ -31,41 +31,31 @@ public class ContainerObjectBuildingTest extends ContainerObjectManagerBasedTest
     @Test
     @DisplayName("A container object can be built from a BuildImage annotation on the class")
     void containerBuildFromAnnotationOnClass() {
-        containerBuildFrom(ContainerBuiltByClassAnnotation.class);
+        assertContainerRuns(ContainerBuiltByClassAnnotation.class);
     }
 
     @Test
     @DisplayName("A container object can be built from a BuildImage annotation on a method returning a URL")
     void containerBuildFromAnnotationOnURLMethod() {
-        containerBuildFrom(ContainerBuiltByURLMethod.class);
+        assertContainerRuns(ContainerBuiltByURLMethod.class);
     }
 
     @Test
     @DisplayName("A container object can be built from a BuildImage annotation on a method returning an InputStream")
     void containerBuildFromAnnotationOnInputStreamMethod() {
-        containerBuildFrom(ContainerBuiltByInputStreamMethod.class);
+        assertContainerRuns(ContainerBuiltByInputStreamMethod.class);
     }
 
     @Test
     @DisplayName("A container object can be built from a BuildImage annotation on a method returning a String")
     void containerBuildFromAnnotationOnStringMethod() {
-        containerBuildFrom(ContainerBuiltByStringMethod.class);
+        assertContainerRuns(ContainerBuiltByStringMethod.class);
     }
 
     @Test
     @DisplayName("A container object can be built from a BuildImage annotation on a method returning a File")
     void containerBuildFromAnnotationOnFileMethod() {
-        containerBuildFrom(ContainerBuiltByFileMethod.class);
-    }
-
-    protected <T> void containerBuildFrom(Class<T> containerType) {
-        T container = manager.create(containerType);
-        assertNotNull(container);
-        try {
-            assertEquals(ContainerObjectsManager.ContainerStatus.STARTED, manager.getContainerStatus(container));
-        } finally {
-            manager.destroy(container);
-        }
+        assertContainerRuns(ContainerBuiltByFileMethod.class);
     }
 
     @BuildImage(TEST_DOCKERFILE_URL)

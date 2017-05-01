@@ -1,17 +1,9 @@
 package org.dockercontainerobjects;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import org.dockercontainerobjects.annotations.BuildImage;
 import org.dockercontainerobjects.annotations.BuildImageContent;
 import org.dockercontainerobjects.annotations.BuildImageContentEntry;
@@ -22,9 +14,9 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 @RunWith(JUnitPlatform.class)
-@DisplayName("Container object building tests")
+@DisplayName("Container object building with additional content tests")
 @Tag("docker")
-public class ContainerObjectBuildingIncludingResourcesTest extends ContainerObjectManagerBasedTest {
+public class ContainerObjectBuildingIncludingResourcesTest extends WebContainerObjectManagerBasedTest {
 
     static final String TEST_DOCKERFILE_PATH = "/ContainerObjectBuildingIncludingResourcesTest_Dockerfile";
     static final String TEST_DOCKERFILE_URL = "classpath://"+TEST_DOCKERFILE_PATH;
@@ -45,30 +37,10 @@ public class ContainerObjectBuildingIncludingResourcesTest extends ContainerObje
     }
 
     protected <T> void containerBuildFrom(Class<T> containerType) {
-        T container = manager.create(containerType);
-        assertNotNull(container);
-        try {
-            assertEquals(ContainerObjectsManager.ContainerStatus.STARTED, manager.getContainerStatus(container));
-            String containerAddr = manager.getContainerAddress(container).getHostAddress();
-            for (int seconds = 0; !isOK("http://"+containerAddr+":8080/") && seconds < 30; seconds++)
-                Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-            assertTrue(isOK("http://"+containerAddr+":8080/sample.html"));
-        } catch (InterruptedException e) {
-            fail(e);
-        } finally {
-            manager.destroy(container);
-        }
-    }
-
-    protected boolean isOK(String endpoint) {
-        try {
-            URL url = new URL(endpoint);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.connect();
-            return connection.getResponseCode() == HttpURLConnection.HTTP_OK;
-        } catch (IOException e) {
-            return false;
-        }
+        assertWithContainerInstance(containerType, containerInstance -> {
+            assertTrue(waitUntilReady(containerInstance));
+            assertTrue(respondsWithOK(containerInstance, "/sample.html"));
+        });
     }
 
     @BuildImage(TEST_DOCKERFILE_URL)
