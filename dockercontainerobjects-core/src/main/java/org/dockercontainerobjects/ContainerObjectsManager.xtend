@@ -14,6 +14,9 @@ interface ContainerObjectsManager extends AutoCloseable {
 
     def String getContainerId(Object containerInstance)
     def ContainerStatus getContainerStatus(Object containerInstance)
+    def boolean isContainerRunning(Object containerInstance) {
+        getContainerStatus(containerInstance) == ContainerStatus.STARTED
+    }
     def NetworkSettings getContainerNetworkSettings(Object containerInstance)
     def <ADDR extends InetAddress> ADDR getContainerAddress(Object containerInstance, Class<ADDR> addrType)
     def InetAddress getContainerAddress(Object containerInstance) {
