@@ -39,7 +39,9 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL
+import java.util.ArrayList
 import java.util.HashMap
+import java.util.List
 import java.util.Map
 import java.util.UUID
 import java.util.stream.Collectors
@@ -265,13 +267,13 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
             containerType.findMethods(expectingNoParameters && annotatedWith(BuildImageContent))
                     .stream
                     .forEach [
-                if (!isOfReturnType(Map))
-                    throw new IllegalArgumentException(
-                            "Method '%s' on class '%s' must return a Map to be used to define the image to use" <<<
-                                    #[it, containerType.simpleName])
-                val newContent = call(containerInstance) as Map<String, Object>
-                if (newContent !== null) content.putAll(newContent)
-            ]
+                        if (!isOfReturnType(Map))
+                            throw new IllegalArgumentException(
+                                    "Method '%s' on class '%s' must return a Map to be used to define the image to use" <<<
+                                            #[it, containerType.simpleName])
+                        val newContent = call(containerInstance) as Map<String, Object>
+                        if (newContent !== null) content.putAll(newContent)
+                    ]
 
             val cleanImageTag = imageTag.toLowerCase
             l.debug [ "image for container class '%s' will be build and tagged as '%s'" <<< #[containerType.simpleName, cleanImageTag] ]
@@ -305,9 +307,24 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
     private def createContainer(Object containerInstance, ImageRegistrationInfo imageInfo) {
         val containerType = containerInstance.class
-        // check for environment
-        val environment = containerType.getAnnotationsByType(EnvironmentEntry)
-                .stream.map [ if (key.empty) value else key+"="+value ].collect(toList)
+
+        val List<String> environment = new ArrayList
+        // check for environment defined as class annotations
+        environment.addAll(
+                containerType.getAnnotationsByType(EnvironmentEntry)
+                    .stream.map [ if (key.empty) value else key+"="+value ].collect(toList))
+        // check for environment defined as methods
+        containerType.findMethods(expectingNoParameters && annotatedWith(Environment))
+                .stream
+                .forEach [
+                    if (!isOfReturnType(Map))
+                        throw new IllegalArgumentException(
+                                "Method '%s' on class '%s' must return a Map to be used to specify environment variales" <<<
+                                        #[it, containerType.simpleName])
+                    val newEnvironment = call(containerInstance) as Map<String, String>
+                    if (newEnvironment !== null)
+                        environment.addAll(newEnvironment.entrySet.stream.map [ key+"="+value ].collect(toList))
+                ]
 
         containerInstance.invokeContainerLifecycleListeners(BeforeCreating)
         val containerId = dockerClient.createContainer(imageInfo.id, environment).id
@@ -366,7 +383,7 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
                 onInstance && expectingNoParameters && annotatedWith(annotationType), empty)
     }
 
-    private static def buildDockerTAR(Object dockerfile, Map<String, Object> content, Class<?> containerType) {
+    private static def buildDockerTAR(Object dockerfile, Map<String, Object> content, Class<?> containerType) throws IOException {
         buildTARGZ [
             withGenericEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.normalize(containerType))
             if (content !== null)

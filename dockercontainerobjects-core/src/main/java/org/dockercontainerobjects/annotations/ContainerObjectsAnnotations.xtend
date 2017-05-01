@@ -97,7 +97,7 @@ annotation BuildImage {
 
 @Documented
 @Retention(RUNTIME)
-@Target(TYPE)
+@Target(#[TYPE, METHOD])
 @Inherited
 annotation Environment {
     EnvironmentEntry[] value = #[]
@@ -105,7 +105,7 @@ annotation Environment {
 
 @Documented
 @Retention(RUNTIME)
-@Target(TYPE)
+@Target(#[TYPE, METHOD])
 @Inherited
 @Repeatable(Environment)
 annotation EnvironmentEntry {
