@@ -220,10 +220,33 @@ For the type `InputStream`, it will be assumed that the content of the `InputStr
 
 ### Other configuration options
 
-The annotation `@EnvironmentEntry` can be used to specify environment paramenters.
+#### Enviroment variables
+
+The annotation `@EnvironmentEntry` can be used to specify environment parameters.
 This annotation is repeatable, which means it can be applied multiple times to the container object class.
-For example, if a container object class is annotated with `@EnvironmentEntry(key="DEFAULT_USER", value="TEST")`, the environment entry `DEFAULT_USER=TEST` will be added to the container at start.
-If the `key` attribute is not set, the entry can be specified in the value, for example `@EnvironmentEntry("DEFAULT_USER=TEST")`.
+For example, if a container object class is annotated with `@EnvironmentEntry(name="DEFAULT_USER", value="TEST")`, the environment entry `DEFAULT_USER=TEST` will be added to the container at start.
+If the `name` attribute is not set, the entry can be specified completely in the value attribute, for example `@EnvironmentEntry("DEFAULT_USER=TEST")`.
+
+The annotation `@Environment` (which is the container annotation for `@EnvironmentEntry`) can be applied to methods.
+Such methods must be defined as expecting no parameters and returning `Map<String, String>`.
+They will be called before starting the container, and the returning map will be added to the list of environment variables to pass to the container.
+
+Multiple environment annotations will be used on the class and on methods.
+All of them will be collected and passed to the container.
+Each variable must be defined once.
+
+#### Adding content to the image being built
+
+The annotation `@BuildImageContentEntry` can be applied to the class to define a resource to be added to the docker image.
+For example, if a container object class is annotated with `@BuildImageContent(name="startup.sh", value="classpath:///service/MyStartupScript.sh")`, a file will be loaded from the specified location in the classpath and added to the docker context with the specified name.
+The name then can be referenced from the `Dockerfile`.
+This annotation is repeatable, which means multiple resources can be added to the image.
+
+The annotation `@BuildImageContent` (which is the container annotation for `@BuildImageContentEntry`) can be applied to methods.
+Such methods must be defined as expecting no parameters and returning `Map<String, Object>`.
+The values of the map can be the same as the return types supported by methods annotated with `@BuildImage`.
+
+The supported protocols and types for content resources are the same as the `@BuildImage` annotation.
 
 ## Injecting data inside the container object from docker
 
