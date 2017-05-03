@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.dockercontainerobjects.annotations.BeforeStarting;
+import org.dockercontainerobjects.annotations.BeforeStartingContainer;
 import org.dockercontainerobjects.annotations.ContainerObject;
 import org.dockercontainerobjects.annotations.RegistryImage;
 import org.junit.jupiter.api.AfterAll;
@@ -70,8 +70,8 @@ public class EmbeddedInstanceContainerObjectTest extends ContainerObjectManagerB
         @ContainerObject
         InnerContainer inner;
 
-        @BeforeStarting
-        private void beforeStarting() {
+        @BeforeStartingContainer
+        private void beforeStartingContainer() {
             beforeStarting.compareAndSet(0, lifecycleIdGenerator.incrementAndGet());
         }
     }
@@ -83,8 +83,8 @@ public class EmbeddedInstanceContainerObjectTest extends ContainerObjectManagerB
 
         public final AtomicInteger beforeStarting = new AtomicInteger();
 
-        @BeforeStarting
-        private void beforeStarting() {
+        @BeforeStartingContainer
+        private void beforeStartingContainer() {
             beforeStarting.compareAndSet(0, lifecycleIdGenerator.incrementAndGet());
         }
     }

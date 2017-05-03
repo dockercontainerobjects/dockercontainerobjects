@@ -17,49 +17,73 @@ annotation ContainerObject {}
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
-annotation BeforeCreating {}
+annotation BeforeBuildingImage {}
 
 @Documented
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
-annotation AfterCreated {}
+annotation AfterImageBuilt {}
 
 @Documented
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
-annotation BeforeStarting {}
+annotation BeforeCreatingContainer {}
 
 @Documented
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
-annotation AfterStarted {}
+annotation AfterContainerCreated {}
 
 @Documented
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
-annotation BeforeStopping {}
+annotation BeforeStartingContainer {}
 
 @Documented
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
-annotation AfterStopped {}
+annotation AfterContainerStarted {}
 
 @Documented
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
-annotation BeforeRemoving {}
+annotation BeforeStoppingContainer {}
 
 @Documented
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
-annotation AfterRemoved {}
+annotation AfterContainerStopped {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
+annotation BeforeRemovingContainer {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
+annotation AfterContainerRemoved {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
+annotation BeforeRemovingImage {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
+annotation AfterImageRemoved {}
 
 @Documented
 @Retention(RUNTIME)

@@ -6,9 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
-import org.dockercontainerobjects.annotations.AfterCreated;
-import org.dockercontainerobjects.annotations.AfterStarted;
-import org.dockercontainerobjects.annotations.BeforeCreating;
+import com.github.dockerjava.api.DockerClient;
+import org.dockercontainerobjects.annotations.AfterContainerCreated;
+import org.dockercontainerobjects.annotations.AfterContainerStarted;
+import org.dockercontainerobjects.annotations.BeforeCreatingContainer;
 import org.dockercontainerobjects.annotations.ContainerAddress;
 import org.dockercontainerobjects.annotations.ContainerId;
 import org.dockercontainerobjects.annotations.RegistryImage;
@@ -19,7 +20,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
-import com.github.dockerjava.api.DockerClient;
 
 @RunWith(JUnitPlatform.class)
 @DisplayName("Container object injection tests")
@@ -91,19 +91,19 @@ public class ContainerObjectInjectionTest extends ContainerObjectManagerBasedTes
         public final AtomicBoolean containerIPAddressStringInjected = new AtomicBoolean(false);
         public final AtomicBoolean containerIPAddressInjected = new AtomicBoolean(false);
 
-        @BeforeCreating
-        private void beforeCreating() {
+        @BeforeCreatingContainer
+        private void beforeCreatingContainer() {
             dockerClientInjected.set(dockerClient != null);
             containerObjectManagerInjected.set(containerObjectManager != null);
         }
 
-        @AfterCreated
-        private void afterCreated() {
+        @AfterContainerCreated
+        private void afterContainerCreated() {
             containerIdInjected.set(containerId != null);
         }
 
-        @AfterStarted
-        private void afterStarted() {
+        @AfterContainerStarted
+        private void afterContainerStarted() {
             containerIPAddressInjected.set(containerIPAddress != null);
             containerIPAddressStringInjected.set(containerIPAddressString != null);
         }

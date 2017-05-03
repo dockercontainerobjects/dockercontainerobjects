@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.dockercontainerobjects.annotations.ContainerObject;
 import org.dockercontainerobjects.annotations.RegistryImage;
 import org.junit.jupiter.api.DisplayName;

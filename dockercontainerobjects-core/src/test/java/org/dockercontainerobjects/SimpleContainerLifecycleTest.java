@@ -5,14 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.dockercontainerobjects.annotations.AfterCreated;
-import org.dockercontainerobjects.annotations.AfterRemoved;
-import org.dockercontainerobjects.annotations.AfterStarted;
-import org.dockercontainerobjects.annotations.AfterStopped;
-import org.dockercontainerobjects.annotations.BeforeCreating;
-import org.dockercontainerobjects.annotations.BeforeRemoving;
-import org.dockercontainerobjects.annotations.BeforeStarting;
-import org.dockercontainerobjects.annotations.BeforeStopping;
+import org.dockercontainerobjects.annotations.AfterContainerCreated;
+import org.dockercontainerobjects.annotations.AfterContainerRemoved;
+import org.dockercontainerobjects.annotations.AfterContainerStarted;
+import org.dockercontainerobjects.annotations.AfterContainerStopped;
+import org.dockercontainerobjects.annotations.BeforeCreatingContainer;
+import org.dockercontainerobjects.annotations.BeforeRemovingContainer;
+import org.dockercontainerobjects.annotations.BeforeStartingContainer;
+import org.dockercontainerobjects.annotations.BeforeStoppingContainer;
 import org.dockercontainerobjects.annotations.RegistryImage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -34,28 +34,28 @@ public class SimpleContainerLifecycleTest extends ContainerObjectManagerBasedTes
             assertAll(
                     () -> assertEquals(ContainerObjectsManager.ContainerStatus.STARTED,
                             manager.getContainerStatus(container)),
-                    () -> assertEquals(1, container.ixBeforeCreating.get()),
-                    () -> assertEquals(2, container.ixAfterCreated.get()),
-                    () -> assertEquals(3, container.ixBeforeStarting.get()),
-                    () -> assertEquals(4, container.ixAfterStarted.get()),
-                    () -> assertEquals(0, container.ixBeforeStopping.get()),
-                    () -> assertEquals(0, container.ixAfterStopped.get()),
-                    () -> assertEquals(0, container.ixBeforeRemoving.get()),
-                    () -> assertEquals(0, container.ixAfterRemoved.get()));
+                    () -> assertEquals(1, container.ixBeforeCreatingContainer.get()),
+                    () -> assertEquals(2, container.ixAfterContainerCreated.get()),
+                    () -> assertEquals(3, container.ixBeforeStartingContainer.get()),
+                    () -> assertEquals(4, container.ixAfterContainerStarted.get()),
+                    () -> assertEquals(0, container.ixBeforeStoppingContainer.get()),
+                    () -> assertEquals(0, container.ixAfterContainerStopped.get()),
+                    () -> assertEquals(0, container.ixBeforeRemovingContainer.get()),
+                    () -> assertEquals(0, container.ixAfterContainerRemoved.get()));
         } finally {
             manager.destroy(container);
         }
         assertAll(
                 () -> assertEquals(ContainerObjectsManager.ContainerStatus.UNKNOWN,
                         manager.getContainerStatus(container)),
-                () -> assertEquals(1, container.ixBeforeCreating.get()),
-                () -> assertEquals(2, container.ixAfterCreated.get()),
-                () -> assertEquals(3, container.ixBeforeStarting.get()),
-                () -> assertEquals(4, container.ixAfterStarted.get()),
-                () -> assertEquals(5, container.ixBeforeStopping.get()),
-                () -> assertEquals(6, container.ixAfterStopped.get()),
-                () -> assertEquals(7, container.ixBeforeRemoving.get()),
-                () -> assertEquals(8, container.ixAfterRemoved.get()));
+                () -> assertEquals(1, container.ixBeforeCreatingContainer.get()),
+                () -> assertEquals(2, container.ixAfterContainerCreated.get()),
+                () -> assertEquals(3, container.ixBeforeStartingContainer.get()),
+                () -> assertEquals(4, container.ixAfterContainerStarted.get()),
+                () -> assertEquals(5, container.ixBeforeStoppingContainer.get()),
+                () -> assertEquals(6, container.ixAfterContainerStopped.get()),
+                () -> assertEquals(7, container.ixBeforeRemovingContainer.get()),
+                () -> assertEquals(8, container.ixAfterContainerRemoved.get()));
     }
 
     @RegistryImage("tomcat:jre8")
@@ -63,57 +63,57 @@ public class SimpleContainerLifecycleTest extends ContainerObjectManagerBasedTes
 
         private static final AtomicInteger IX = new AtomicInteger();
 
-        public final AtomicInteger ixBeforeCreating = new AtomicInteger();
-        public final AtomicInteger ixAfterCreated = new AtomicInteger();
-        public final AtomicInteger ixBeforeStarting = new AtomicInteger();
-        public final AtomicInteger ixAfterStarted = new AtomicInteger();
-        public final AtomicInteger ixBeforeStopping = new AtomicInteger();
-        public final AtomicInteger ixAfterStopped = new AtomicInteger();
-        public final AtomicInteger ixBeforeRemoving = new AtomicInteger();
-        public final AtomicInteger ixAfterRemoved = new AtomicInteger();
+        public final AtomicInteger ixBeforeCreatingContainer = new AtomicInteger();
+        public final AtomicInteger ixAfterContainerCreated = new AtomicInteger();
+        public final AtomicInteger ixBeforeStartingContainer = new AtomicInteger();
+        public final AtomicInteger ixAfterContainerStarted = new AtomicInteger();
+        public final AtomicInteger ixBeforeStoppingContainer = new AtomicInteger();
+        public final AtomicInteger ixAfterContainerStopped = new AtomicInteger();
+        public final AtomicInteger ixBeforeRemovingContainer = new AtomicInteger();
+        public final AtomicInteger ixAfterContainerRemoved = new AtomicInteger();
 
         private static void ix(final AtomicInteger ref) {
             ref.compareAndSet(0, IX.incrementAndGet());
         }
 
-        @BeforeCreating
-        void beforeCreating() {
-            ix(ixBeforeCreating);
+        @BeforeCreatingContainer
+        void beforeCreatingContainer() {
+            ix(ixBeforeCreatingContainer);
         }
 
-        @AfterCreated
-        void afterCreated() {
-            ix(ixAfterCreated);
+        @AfterContainerCreated
+        void afterContainerCreated() {
+            ix(ixAfterContainerCreated);
         }
 
-        @BeforeStarting
-        void beforeStarting() {
-            ix(ixBeforeStarting);
+        @BeforeStartingContainer
+        void beforeStartingContainer() {
+            ix(ixBeforeStartingContainer);
         }
 
-        @AfterStarted
-        void afterStarted() {
-            ix(ixAfterStarted);
+        @AfterContainerStarted
+        void afterContainerStarted() {
+            ix(ixAfterContainerStarted);
         }
 
-        @BeforeStopping
-        void beforeStopping() {
-            ix(ixBeforeStopping);
+        @BeforeStoppingContainer
+        void beforeStoppingContainer() {
+            ix(ixBeforeStoppingContainer);
         }
 
-        @AfterStopped
-        void afterStopped() {
-            ix(ixAfterStopped);
+        @AfterContainerStopped
+        void afterContainerStopped() {
+            ix(ixAfterContainerStopped);
         }
 
-        @BeforeRemoving
-        void beforeRemoving() {
-            ix(ixBeforeRemoving);
+        @BeforeRemovingContainer
+        void beforeRemovingContainer() {
+            ix(ixBeforeRemovingContainer);
         }
 
-        @AfterRemoved
-        void afterRemoved() {
-            ix(ixAfterRemoved);
+        @AfterContainerRemoved
+        void afterContainerRemoved() {
+            ix(ixAfterContainerRemoved);
         }
     }
 }

@@ -54,14 +54,18 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.dockercontainerobjects.ContainerObjectsEnvironment.ContainerRegistrationInfo
 import org.dockercontainerobjects.ContainerObjectsEnvironment.ImageRegistrationInfo
 import org.dockercontainerobjects.ContainerObjectsEnvironment.RegistrationInfo
-import org.dockercontainerobjects.annotations.AfterCreated
-import org.dockercontainerobjects.annotations.AfterRemoved
-import org.dockercontainerobjects.annotations.AfterStarted
-import org.dockercontainerobjects.annotations.AfterStopped
-import org.dockercontainerobjects.annotations.BeforeCreating
-import org.dockercontainerobjects.annotations.BeforeRemoving
-import org.dockercontainerobjects.annotations.BeforeStarting
-import org.dockercontainerobjects.annotations.BeforeStopping
+import org.dockercontainerobjects.annotations.AfterContainerCreated
+import org.dockercontainerobjects.annotations.AfterContainerRemoved
+import org.dockercontainerobjects.annotations.AfterContainerStarted
+import org.dockercontainerobjects.annotations.AfterContainerStopped
+import org.dockercontainerobjects.annotations.AfterImageBuilt
+import org.dockercontainerobjects.annotations.AfterImageRemoved
+import org.dockercontainerobjects.annotations.BeforeBuildingImage
+import org.dockercontainerobjects.annotations.BeforeCreatingContainer
+import org.dockercontainerobjects.annotations.BeforeRemovingContainer
+import org.dockercontainerobjects.annotations.BeforeRemovingImage
+import org.dockercontainerobjects.annotations.BeforeStartingContainer
+import org.dockercontainerobjects.annotations.BeforeStoppingContainer
 import org.dockercontainerobjects.annotations.BuildImage
 import org.dockercontainerobjects.annotations.BuildImageContent
 import org.dockercontainerobjects.annotations.BuildImageContentEntry
@@ -232,6 +236,7 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
             forcePull = registryImageAnnotationValue.forcePull
             autoRemove = registryImageAnnotationValue.autoRemove
         } else {
+            containerInstance.invokeContainerLifecycleListeners(BeforeBuildingImage)
             var Object imageRef = null
             var String imageTag = null
             if (buildImageAnnotation.present) {
@@ -288,6 +293,7 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
             imageId = cleanImageTag
             autoRemove = true
             imageBuilt = true
+            containerInstance.invokeContainerLifecycleListeners(AfterImageBuilt)
         }
 
         val imagePresent = imageBuilt ||
@@ -306,58 +312,65 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
     }
 
     private def createContainer(Object containerInstance, ImageRegistrationInfo imageInfo) {
+        containerInstance.invokeContainerLifecycleListeners(BeforeCreatingContainer)
+
+        val environment = prepareContainerEnvironment(containerInstance)
+        val containerId = dockerClient.createContainer(imageInfo.id, environment).id
+        containerInstance.updateFields(
+            onInstance && ofType(String) && annotatedWith(Inject, ContainerId), constant(containerId))
+
+        containerInstance.invokeContainerLifecycleListeners(AfterContainerCreated)
+
+        new ContainerRegistrationInfo(containerId, containerInstance)
+    }
+
+    private def prepareContainerEnvironment(Object containerInstance) {
         val containerType = containerInstance.class
 
         val List<String> environment = new ArrayList
         // check for environment defined as class annotations
         environment.addAll(
                 containerType.getAnnotationsByType(EnvironmentEntry)
-                    .stream.map [ if (name.empty) value else name+"="+value ].collect(toList))
+                .stream.map [ if (name.empty) value else name+"="+value ].collect(toList))
         // check for environment defined as methods
         containerType.findMethods(expectingNoParameters && annotatedWith(Environment))
-                .stream
-                .forEach [
-                    if (!isOfReturnType(Map))
-                        throw new IllegalArgumentException(
-                                "Method '%s' on class '%s' must return a Map to be used to specify environment variales" <<<
-                                        #[it, containerType.simpleName])
-                    val newEnvironment = call(containerInstance) as Map<String, String>
-                    if (newEnvironment !== null)
-                        environment.addAll(newEnvironment.entrySet.stream.map [ key+"="+value ].collect(toList))
-                ]
+        .stream
+        .forEach [
+            if (!isOfReturnType(Map))
+                throw new IllegalArgumentException(
+                        "Method '%s' on class '%s' must return a Map to be used to specify environment variales" <<<
+                                #[it, containerType.simpleName])
+            val newEnvironment = call(containerInstance) as Map<String, String>
+            if (newEnvironment !== null)
+                environment.addAll(newEnvironment.entrySet.stream.map [ key+"="+value ].collect(toList))
+        ]
 
-        containerInstance.invokeContainerLifecycleListeners(BeforeCreating)
-        val containerId = dockerClient.createContainer(imageInfo.id, environment).id
-        containerInstance.updateFields(
-            onInstance && ofType(String) && annotatedWith(Inject, ContainerId), constant(containerId))
-        containerInstance.invokeContainerLifecycleListeners(AfterCreated)
-
-        new ContainerRegistrationInfo(containerId, containerInstance)
+        environment
     }
 
     private def startContainer(Object containerInstance, ContainerRegistrationInfo containerInfo) {
-        containerInstance.invokeContainerLifecycleListeners(BeforeStarting)
+        containerInstance.invokeContainerLifecycleListeners(BeforeStartingContainer)
         val response = dockerClient.startContainer(containerInfo.id)
         containerInstance.updateFields(
             onInstance && ofType(NetworkSettings) && annotatedWith(Inject), constant(response.networkSettings))
         containerInstance.updateFields(onInstance && annotatedWith(Inject, ContainerAddress)) [ type|
             response.networkSettings.inetAddressOfType(type)
         ]
-        containerInstance.invokeContainerLifecycleListeners(AfterStarted)
+        containerInstance.invokeContainerLifecycleListeners(AfterContainerStarted)
     }
 
     private def stopContainer(Object containerInstance, ContainerRegistrationInfo containerInfo) {
-        containerInstance.invokeContainerLifecycleListeners(BeforeStopping)
+        containerInstance.invokeContainerLifecycleListeners(BeforeStoppingContainer)
         dockerClient.stopContainer(containerInfo.id)
-        containerInstance.invokeContainerLifecycleListeners(AfterStopped)
+        containerInstance.invokeContainerLifecycleListeners(AfterContainerStopped)
         containerInstance.updateFields(onInstance && ofType(NetworkSettings) && annotatedWith(Inject), nil)
         containerInstance.updateFields(onInstance && annotatedWith(Inject, ContainerAddress), nil)
     }
 
     private def removeContainer(Object containerInstance, ContainerRegistrationInfo containerInfo) {
-        containerInstance.invokeContainerLifecycleListeners(BeforeRemoving)
+        containerInstance.invokeContainerLifecycleListeners(BeforeRemovingContainer)
         dockerClient.removeContainer(containerInfo.id)
-        containerInstance.invokeContainerLifecycleListeners(AfterRemoved)
+        containerInstance.invokeContainerLifecycleListeners(AfterContainerRemoved)
         containerInstance.updateFields(onInstance && ofType(String) && annotatedWith(Inject, ContainerId), nil)
     }
 
@@ -365,7 +378,9 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
         // try to remove image if requested
         if (imageInfo.autoRemove)
             try {
+                containerInstance.invokeContainerLifecycleListeners(BeforeRemovingImage)
                 dockerClient.removeImage(imageInfo.id)
+                containerInstance.invokeContainerLifecycleListeners(AfterImageRemoved)
             } catch (NotFoundException e) {
                 // if the image is already removed, log and ignore
                 l.warn("Image '%s' requested to be auto-removed, but was not found" <<< #[imageInfo.id], e)
