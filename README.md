@@ -177,9 +177,24 @@ A link will be created from the containing container object to each of the conta
 
 ## Container Objects lifecycle
 
-Container objects can define methods annotated with any of `@BeforeCreating`, `@AfterCreated`, `@BeforeStarting`, `@AfterStarted`, `@BeforeStopping`, `@AfterStopped`, `@BeforeRemoving`, `@AfterRemoved`.
-Such methods will be invoked on each stage of the container creation lifecycle.
+Container objects can define methods annotated with any of a list of `@Before...` or `@After...`
+Such methods will be invoked on each stage of the container object lifecycle.
 Methods must be defined as instance methods, accepting no parameters and returning void.
+
+The lifecycle goes in this order:
+1. Container Object initialization
+   1.1. Build image. Only happens when a new image is created. Use `@BeforeBuildingImage` and `@AfterImageBuilt`.
+   1.2. Create container. Always happens. Use `@BeforeCreatingContainer` and `@AfterContainerCreated`.
+   1.3. Start container. Always happens. Use `@BeforeStartingContainer` and `@AfterContainerStarted`. 
+2. Container object destruction
+   2.1. Stop container. Always happens. Use `@BeforeStoppingContainer` and `@AfterContainerStopped`.
+   2.2. Remove container. Always happens. Use `@BeforeRemovingContainer` and `@AfterContainerRemoved`.
+   2.3. Remove image. Only happens when a new image is created, or the image didn't exist locally and the container is marked as autoRemove. Use `@BeforeRemovingImage` and `@AfterImageRemoved`.
+3. Other callbacks
+   3.1. Image to use: if a method is annotated with `@RegisterImage`, it will be called before creating the container (see 1.2)
+   3.2. Image to build: if a method is annotated with `@BuildImage`, it will be called in the middle of the image build (see 1.1)
+   3.3. Content for image to build: if a method is annotated with `@BuildImageContent`, it will be called in the middle of the image build (see 1.1) and after the selecting the dockerfile (see 3.2)
+   3.4. Environment preparation: if a method is annotated with `@Environment`, it will be called in the middle of the container creation (see 1.2)
 
 ## Container configuration
 
