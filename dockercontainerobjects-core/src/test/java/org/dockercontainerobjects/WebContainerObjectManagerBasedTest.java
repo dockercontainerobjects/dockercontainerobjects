@@ -28,7 +28,7 @@ public abstract class WebContainerObjectManagerBasedTest extends ContainerObject
     protected static boolean respondsWithCode(String endpoint, int status) {
         try {
             URL url = new URL(endpoint);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) env.openOnDockerNetwork(url);
             connection.connect();
             return connection.getResponseCode() == status;
         } catch (IOException e) {

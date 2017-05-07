@@ -18,7 +18,7 @@ class DockerContainerObjectsExtension implements
     private var extension ContainerObjectsClassEnhancer enhancer
 
     override beforeAll(ContainerExtensionContext context) throws Exception {
-        enhancer = ContainerObjectsEnvironmentFactory.instance.newDefaultEnvironment.enhancer
+        enhancer = ContainerObjectsEnvironmentFactory.instance.newEnvironment.enhancer
         context.testClass.ifPresent[ setupClass ]
     }
 

@@ -13,7 +13,7 @@ class DockerContainerObjectsRunner extends BlockJUnit4ClassRunner {
 
     new(Class<?> type) throws InitializationError {
         super(type)
-        enhancer = ContainerObjectsEnvironmentFactory.instance.newDefaultEnvironment.enhancer
+        enhancer = ContainerObjectsEnvironmentFactory.instance.newEnvironment.enhancer
     }
 
     override classRules() {

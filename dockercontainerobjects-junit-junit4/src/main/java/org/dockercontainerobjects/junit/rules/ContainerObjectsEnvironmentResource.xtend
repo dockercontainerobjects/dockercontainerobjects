@@ -11,7 +11,7 @@ class ContainerObjectsEnvironmentResource extends ExternalResource {
     var ContainerObjectsEnvironment environment
 
     override before() {
-        environment = ContainerObjectsEnvironmentFactory.instance.newDefaultEnvironment
+        environment = ContainerObjectsEnvironmentFactory.instance.newEnvironment
     }
 
     override after() {
