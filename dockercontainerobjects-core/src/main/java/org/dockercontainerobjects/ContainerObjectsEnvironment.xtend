@@ -1,12 +1,13 @@
 package org.dockercontainerobjects
 
 import java.io.IOException
+import java.net.Proxy
+import java.net.URL
 import java.util.Map
 import java.util.concurrent.ConcurrentHashMap
+import com.github.dockerjava.api.DockerClient
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.eclipse.xtend.lib.annotations.Data
-import com.github.dockerjava.api.DockerClient
-import com.github.dockerjava.core.DockerClientBuilder
 
 class ContainerObjectsEnvironment implements AutoCloseable {
 
@@ -19,20 +20,24 @@ class ContainerObjectsEnvironment implements AutoCloseable {
     @Accessors(PUBLIC_GETTER)
     val ContainerObjectsClassEnhancer enhancer
 
+    @Accessors(PUBLIC_GETTER)
+    val Proxy dockerNetworkProxy
+
     private val Map<Object, RegistrationInfo> containers = new ConcurrentHashMap
 
-    new(DockerClient dockerClient) {
+    protected new(DockerClient dockerClient, Proxy dockerNetworkProxy) {
         this.dockerClient = dockerClient
+        this.dockerNetworkProxy = dockerNetworkProxy
         manager = new ContainerObjectsManagerImpl(this)
         enhancer = new ContainerObjectsClassEnhancerImpl(this)
     }
 
-    new() {
-        this(DockerClientBuilder.instance.build)
-    }
-
     override close() throws IOException {
         dockerClient.close
+    }
+
+    def openOnDockerNetwork(URL url) throws IOException {
+        url.openConnection(dockerNetworkProxy)
     }
 
     protected def registerContainer(RegistrationInfo info) {

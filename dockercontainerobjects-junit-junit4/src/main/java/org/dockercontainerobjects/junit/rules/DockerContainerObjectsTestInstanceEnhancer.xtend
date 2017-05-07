@@ -25,7 +25,7 @@ class DockerContainerObjectsTestInstanceEnhancer implements TestRule {
     }
 
     new(Class<?> testClass) {
-        this(ContainerObjectsEnvironmentFactory.instance.newDefaultEnvironment.enhancer, true, testClass)
+        this(ContainerObjectsEnvironmentFactory.instance.newEnvironment.enhancer, true, testClass)
     }
 
     override apply(Statement base, Description description) {
