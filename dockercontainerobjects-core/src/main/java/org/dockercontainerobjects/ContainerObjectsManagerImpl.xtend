@@ -116,6 +116,7 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
         // injecting non-container attributes
         containerInstance.updateFields(onInstance && ofType(DockerClient) && annotatedWith(Inject), constant(env.dockerClient))
+        containerInstance.updateFields(onInstance && ofType(ContainerObjectsEnvironment) && annotatedWith(Inject), constant(env))
         containerInstance.updateFields(onInstance && ofType(ContainerObjectsManager) && annotatedWith(Inject), constant(this))
 
         // find or prepare the container image
@@ -151,6 +152,7 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
         // cleanup non-container attributes
         containerInstance.updateFields(onInstance && ofType(DockerClient) && annotatedWith(Inject), nil)
+        containerInstance.updateFields(onInstance && ofType(ContainerObjectsEnvironment) && annotatedWith(Inject), nil)
         containerInstance.updateFields(onInstance && ofType(ContainerObjectsManager) && annotatedWith(Inject), nil)
 
         // destroy containers in instance fields
