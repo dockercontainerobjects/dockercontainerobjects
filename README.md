@@ -273,4 +273,58 @@ The container object class can define fields annotated with `@Inject` to receive
 - Fields annotated with `@ContainerAddress` and of type either `String` or `Inet4Address` will receive the container internal IPv4 after the container is started.
 - Fields annotated with `@ContainerAddress` and of type `Inet6Address` will receive the container global IPv6 after the container is started.
 - Fields of type `NetworkSettings` will receive a reference to the `NetworkSettings` container information after starting it.
-- Fields of type `ContainerObjectsManager` will receive a reference to a `ContainerObjectsManager` used to do some opperations on container objects.
+- Fields of type `ContainerObjectsEnvironment` will receive a reference to a `ContainerObjectsEnvironment` which allows interacting with container objects.
+- Fields of type `ContainerObjectsManager` will receive a reference to a `ContainerObjectsManager` which allows interacting with container objects.
+
+## Non-native or remote docker support (docker-machine, Windows, MacOS)
+
+Docker creates a virtual network and containers are connected to it.
+To access a container, there are two possible options: (1) publishing one or more exposed ports from the container; or (2) accessing directly the containers on the virtual network.
+Publishing ports is the simplest solution, but is also limited. If multiple containers internally use the same port, they would need to be published to different ports.
+Sometimes that creates additional problems.
+
+When docker is running natively on Linux, the virtual network is directly accessible from the localhost, and the IPs assigned to containers can be reached directly from the host.
+When docker uses some type of virtualization (docker-machine, VirtualBox, Docker for Windows/MacOS), those virtual networks are not accessible directly.
+A simple solution to this problem is opening some type of proxy between the host and the docker virtual network.
+If using `docker-machine`, a SOCKS proxy is the easiest solution.
+Simply execute the `ssh` command in the following way:
+
+```bash
+$ docker-machine ssh ${MACHINE NAME} -D1080
+```
+
+This will open a connection from your local host to the docker VM and opens a SOCKS proxy on port `1080`.
+
+Not everything works with SOCKS proxy.
+If an HTTP proxy is needed, an image for an HTTP proxy can be downloaded, run inside docker, and the HTTP proxy port can be exposed.
+I have used `minimum2scp/squid:latest` successfully, many others should work.
+
+Once the proxy method is determined, the environment can be configured by system properties or by environment variables.
+
+* Environment variables must be prefixed with: *DOCKER_NETWORKPROXY_*
+* System properties must be prefixed with: *org.dockercontainerobjects.dockernetworkproxy.*
+* System properties can also be defined with the environment variable name.
+
+Supported parameters:
+
+|Environment Variable|System Property|Description                                                   |
+|--------------------|---------------|--------------------------------------------------------------|
+|TYPE                |type           |Specifies the type of proxy. Options are DIRECT, SOCKS or HTTP|
+|HOSTNAME            |hostname       |Specifies the host running the proxy. Default is *localhost*  |
+|PORT                |port           |Specifies the port where the proxy is listening. Default is 1080 for SOCKS and 8080 for HTTP|
+
+Once the environment variable is defined, an instance of `ContainerObjectsEnvironment` will allow a container object to take into consideration the cnfigured proxy with the following methods:
+
+```java
+public class ContainerObjectsEnvironment {
+    //...
+    public java.net.Proxy getDockerNetworkProxy();
+    public java.net.URLConnection openOnDockerNetwork(java.net.URL url);
+}
+```
+
+The method `getDockerNetworkProxy()` simply allows access to the configured `Proxy`.
+The method `openOnDockerNetwork(java.net.URL)` expects an URL, and the returned `URLConection` will be resolved using the `Proxy`. 
+
+These methods should be used by all code trying to connect to containers.
+At runtime, Docker Container Objects will open connections directly or using a proxy depending on the environment configuration.
