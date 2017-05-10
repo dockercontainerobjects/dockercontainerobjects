@@ -102,6 +102,10 @@ subprojects {
         resolutionRules files("${rootProject.projectDir}/src/main/rules/exclude-log4j.json")
     }
 
+    nebulaRelease {
+        releaseBranchPatterns = [/master/, /HEAD/, /release\/v\d+\.\d+\.x/] as Set
+    }
+
     bintray {
         user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
         key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
