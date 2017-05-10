@@ -19,7 +19,7 @@ If using Maven, add the following dependency:
 
 ```xml
 <dependency>
-    <groupId>org.dockecontainerobjects</groupId>
+    <groupId>org.dockercontainerobjects</groupId>
     <artifactId>dockercontainerobjects-junit-platform1</artifactId>
     <version>${dockerContainerObjectsVersion}</version>
     <scope>test</scope>
@@ -29,7 +29,7 @@ If using Maven, add the following dependency:
 If using Gradle, add the following dependency:
 
 ```groovy
-testCompile "org.dockecontainerobjects:dockercontainerobjects-junit-platform1:${dockerContainerObjectsVersion}"
+testCompile "org.dockercontainerobjects:dockercontainerobjects-junit-platform1:${dockerContainerObjectsVersion}"
 ```
 
 Or download the required JARs:
@@ -74,7 +74,7 @@ If using Maven, add the following dependency:
 
 ```xml
 <dependency>
-    <groupId>org.dockecontainerobjects</groupId>
+    <groupId>org.dockercontainerobjects</groupId>
     <artifactId>dockercontainerobjects-junit-junit4</artifactId>
     <version>${dockerContainerObjectsVersion}</version>
     <scope>test</scope>
@@ -84,7 +84,7 @@ If using Maven, add the following dependency:
 If using Gradle, add the following dependency:
 
 ```groovy
-testCompile "org.dockecontainerobjects:dockercontainerobjects-junit-junit4:${dockerContainerObjectsVersion}"
+testCompile "org.dockercontainerobjects:dockercontainerobjects-junit-junit4:${dockerContainerObjectsVersion}"
 ```
 
 Or download the required JARs:
