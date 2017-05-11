@@ -14,12 +14,24 @@ class AccessibleObjects {
 
     private static val l = LoggerFactory.getLogger(Fields)
 
-    public static def <T extends AccessibleObject> isAnnotatedWith(T o, Class<? extends Annotation>... annotations) {
+    @Pure
+    public static def <T extends AccessibleObject> isAnnotatedWith(T o, Class<? extends Annotation> type) {
+        o.isAnnotationPresent(type)
+    }
+
+    @Pure
+    public static def <T extends AccessibleObject> Predicate<T> annotatedWith(Class<? extends Annotation> type) {
+        [ isAnnotatedWith(type) ]
+    }
+
+    @Pure
+    public static def <T extends AccessibleObject> isAnnotatedWithAll(T o, Class<? extends Annotation>... annotations) {
         !annotations.stream.filter[ !o.isAnnotationPresent(it) ].findAny.present
     }
 
-    public static def <T extends AccessibleObject> Predicate<T> annotatedWith(Class<? extends Annotation>... annotations) {
-        [ isAnnotatedWith(annotations) ]
+    @Pure
+    public static def <T extends AccessibleObject> Predicate<T> annotatedWithAll(Class<? extends Annotation>... annotations) {
+        [ isAnnotatedWithAll(annotations) ]
     }
 
     public static def <T extends AccessibleObject> T reachable(T o) {

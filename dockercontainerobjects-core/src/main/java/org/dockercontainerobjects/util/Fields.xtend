@@ -2,14 +2,11 @@ package org.dockercontainerobjects.util
 
 import static extension org.dockercontainerobjects.util.Loggers.debug
 import static extension org.dockercontainerobjects.util.Loggers.warn
-import static extension org.dockercontainerobjects.util.Optionals.confirmed
-import static extension org.dockercontainerobjects.util.Optionals.value
 import static extension org.dockercontainerobjects.util.Strings.operator_tripleLessThan
 
 import java.lang.reflect.Field
 import java.util.ArrayList
 import java.util.Collection
-import java.util.Optional
 import java.util.function.Function
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
@@ -44,6 +41,16 @@ class Fields extends Members {
         [ isOfType(type) ]
     }
 
+    @Pure
+    public static def isOfOneType(Field f, Class<?>... types) {
+        types.stream.filter[ isAssignableFrom(f.type) ].findAny.present
+    }
+
+    @Pure
+    public static def Predicate<Field> ofOneType(Class<?>... types) {
+        [ isOfOneType(types) ]
+    }
+
     public static def Object read(Field field, Object instance) {
         try {
             field.reachable.get(instance)
@@ -63,20 +70,18 @@ class Fields extends Members {
         }
     }
 
-    public static def <T, F> void updateFields(Class<T> type, Optional<T> instance, Predicate<Field> fieldSelector,
-            Function<Class<?>, ?> valueSupplier) {
+    public static def <T, F> void updateFields(Class<T> type, T instance, Predicate<Field> fieldSelector, Function<Field, Object> valueSupplier) {
         type.findFields(fieldSelector).stream.forEach [ field|
             l.debug [ "Preparing to update field '%s'" <<< field ]
             if (field.readOnly)
                 throw new IllegalArgumentException(
                         "Cannot modify final field '%s'" <<< field.name)
-            field.update(instance.value, valueSupplier.apply(field.type))
+            field.update(instance, valueSupplier.apply(field))
         ]
     }
 
-    public static def <T, F> void updateFields(T instance, Predicate<Field> fieldSelector,
-            Function<Class<?>, ?> valueSupplier) {
+    public static def <T, F> void updateFields(T instance, Predicate<Field> fieldSelector, Function<Field, Object> valueSupplier) {
         val type = instance.class as Class<T>
-        type.updateFields(instance.confirmed, fieldSelector, valueSupplier);
+        type.updateFields(instance, fieldSelector, valueSupplier)
     }
 }
