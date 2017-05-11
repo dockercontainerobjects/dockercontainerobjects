@@ -1,0 +1,4 @@
+org.dockercontainerobjects.extensions.ContainerAddressInjectorExtension  # Injector for InetAddress and @ContainerAddress
+org.dockercontainerobjects.extensions.ContainerIdInjectorExtension       # Injector for @ContainerId
+org.dockercontainerobjects.extensions.GlobalObjectsInjectorExtension     # Injector for COEnvironment, COManager, DockerClient, Proxy
+org.dockercontainerobjects.extensions.NetworkSettingsInjectorExtension   # Injector for NetworkSettings
