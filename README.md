@@ -184,13 +184,15 @@ Methods must be defined as instance methods, accepting no parameters and returni
 The lifecycle goes in this order:
 
 1. Container Object initialization
-  - 1\.1\. Build image. Only happens when a new image is created. Use `@BeforeBuildingImage` and `@AfterImageBuilt`.
-  - 1\.2\. Create container. Always happens. Use `@BeforeCreatingContainer` and `@AfterContainerCreated`.
-  - 1\.3\. Start container. Always happens. Use `@BeforeStartingContainer` and `@AfterContainerStarted`. 
+  - 1\.1\. Prepare Image. Always happens. The engine looks for the image to use. Use `@BeforePreparingImage` and `@AfterImagePrepared`.
+  - 1\.2\. Build image. Only happens when a new image needs to be created. If called, both callbacks will happen inside the prepare image calls. Use `@BeforeBuildingImage` and `@AfterImageBuilt`.
+  - 1\.3\. Create container. Always happens. Use `@BeforeCreatingContainer` and `@AfterContainerCreated`.
+  - 1\.4\. Start container. Always happens. Use `@BeforeStartingContainer` and `@AfterContainerStarted`. 
 2. Container object destruction
   - 2\.1\. Stop container. Always happens. Use `@BeforeStoppingContainer` and `@AfterContainerStopped`.
   - 2\.2\. Remove container. Always happens. Use `@BeforeRemovingContainer` and `@AfterContainerRemoved`.
-  - 2\.3\. Remove image. Only happens when a new image is created, or the image didn't exist locally and the container is marked as autoRemove. Use `@BeforeRemovingImage` and `@AfterImageRemoved`.
+  - 2\.3\. Release image. Always happens. The engine is finalizing anything related to the used image. Use `@BeforeReleasingImage` and `@AfterImageReleased`.
+  - 2\.4\. Remove image. Only happens when a new image is created, or the image didn't exist locally and the container is marked as autoRemove. If called, both callbacks will happen inside the release image calls. Use `@BeforeRemovingImage` and `@AfterImageRemoved`.
 3. Other callbacks
   - 3\.1\. Image to use: if a method is annotated with `@RegisterImage`, it will be called before creating the container (see 1.2)
   - 3\.2\. Image to build: if a method is annotated with `@BuildImage`, it will be called in the middle of the image build (see 1.1)
@@ -267,14 +269,17 @@ The supported protocols and types for content resources are the same as the `@Bu
 ## Injecting data inside the container object from docker
 
 The container object class can define fields annotated with `@Inject` to receive information from docker.
+Extensions can be used to inject many types of objects. Each type is injected by a specific extension.
+There are a few built in extensions that support many core types.
 
-- Fields of type `DockerClient` will receive a reference to the `DockerClient` instance used to talk to Docker.
-- Fields annotated with `@ContainerId` and of type `String` will receive the container id after the container is created.
-- Fields annotated with `@ContainerAddress` and of type either `String` or `Inet4Address` will receive the container internal IPv4 after the container is started.
-- Fields annotated with `@ContainerAddress` and of type `Inet6Address` will receive the container global IPv6 after the container is started.
-- Fields of type `NetworkSettings` will receive a reference to the `NetworkSettings` container information after starting it.
-- Fields of type `ContainerObjectsEnvironment` will receive a reference to a `ContainerObjectsEnvironment` which allows interacting with container objects.
-- Fields of type `ContainerObjectsManager` will receive a reference to a `ContainerObjectsManager` which allows interacting with container objects.
+- Fields of type `DockerClient` will receive a reference to the `DockerClient` instance used to talk to Docker. (`GlobalObjectsInjectorExtension`)
+- Fields annotated with `@ContainerId` and of type `String` will receive the container id after the container is created. (`ContainerIdInjectorExtension`)
+- Fields annotated with `@ContainerAddress` and of type either `String` or `Inet4Address` will receive the container internal IPv4 after the container is started. (`ContainerAddressInjectorExtension`)
+- Fields annotated with `@ContainerAddress` and of type `Inet6Address` will receive the container global IPv6 after the container is started. (`ContainerAddressInjectorExtension`)
+- Fields of type `NetworkSettings` will receive a reference to the `NetworkSettings` container information after starting it. (`NetworkSettingsInjectorExtension`)
+- Fields of type `ContainerObjectsEnvironment` will receive a reference to a `ContainerObjectsEnvironment` which allows interacting with container objects. (`GlobalObjectsInjectorExtension`)
+- Fields of type `ContainerObjectsManager` will receive a reference to a `ContainerObjectsManager` which allows interacting with container objects. (`GlobalObjectsInjectorExtension`)
+- Fields of type `Proxy` will receive a reference to a `Proxy` which allows interacting with the docker virtual network of containers. (`GlobalObjectsInjectorExtension`)
 
 ## Non-native or remote docker support (docker-machine, Windows, MacOS)
 
