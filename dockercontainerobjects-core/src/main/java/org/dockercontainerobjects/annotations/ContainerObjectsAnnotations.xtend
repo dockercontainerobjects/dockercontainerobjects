@@ -17,6 +17,12 @@ annotation ContainerObject {}
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
+annotation BeforePreparingImage {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
 annotation BeforeBuildingImage {}
 
 @Documented
@@ -24,6 +30,12 @@ annotation BeforeBuildingImage {}
 @Target(METHOD)
 @Inherited
 annotation AfterImageBuilt {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
+annotation AfterImagePrepared {}
 
 @Documented
 @Retention(RUNTIME)
@@ -77,6 +89,12 @@ annotation AfterContainerRemoved {}
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
+annotation BeforeReleasingImage {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
 annotation BeforeRemovingImage {}
 
 @Documented
@@ -84,6 +102,12 @@ annotation BeforeRemovingImage {}
 @Target(METHOD)
 @Inherited
 annotation AfterImageRemoved {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
+annotation AfterImageReleased {}
 
 @Documented
 @Retention(RUNTIME)

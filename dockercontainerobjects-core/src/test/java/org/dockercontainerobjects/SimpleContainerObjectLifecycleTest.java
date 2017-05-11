@@ -3,6 +3,7 @@ package org.dockercontainerobjects;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Collections;
 import java.util.Map;
@@ -55,8 +56,7 @@ public class SimpleContainerObjectLifecycleTest extends ContainerObjectManagerBa
             manager.destroy(container);
         }
         assertAll(
-                () -> assertEquals(ContainerObjectsManager.ContainerStatus.UNKNOWN,
-                        manager.getContainerStatus(container)),
+                () -> assertThrows(IllegalArgumentException.class, () -> manager.getContainerStatus(container)),
                 () -> assertEquals(0, container.ixBeforeBuildingImage.get()),
                 () -> assertEquals(0, container.ixBuildImage.get()),
                 () -> assertEquals(0, container.ixBuildImageContent.get()),

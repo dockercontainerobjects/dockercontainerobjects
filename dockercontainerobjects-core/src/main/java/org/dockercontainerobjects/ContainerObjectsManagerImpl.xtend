@@ -3,6 +3,7 @@ package org.dockercontainerobjects
 import static extension java.util.Arrays.stream
 import static extension java.util.Optional.empty
 import static extension java.util.stream.Collectors.toList
+import static extension org.dockercontainerobjects.ContainerObjectLifecycleStage.*
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.buildImage
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.createContainer
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inetAddressOfType
@@ -17,10 +18,6 @@ import static extension org.dockercontainerobjects.util.AccessibleObjects.annota
 import static extension org.dockercontainerobjects.util.AccessibleObjects.instantiate
 import static extension org.dockercontainerobjects.util.CompressExtensions.buildTARGZ
 import static extension org.dockercontainerobjects.util.CompressExtensions.withEntry
-import static extension org.dockercontainerobjects.util.Fields.ofType
-import static extension org.dockercontainerobjects.util.Fields.updateFields
-import static extension org.dockercontainerobjects.util.Functions.constant
-import static extension org.dockercontainerobjects.util.Functions.nil
 import static extension org.dockercontainerobjects.util.Loggers.debug
 import static extension org.dockercontainerobjects.util.Members.onInstance
 import static extension org.dockercontainerobjects.util.Methods.call
@@ -30,6 +27,7 @@ import static extension org.dockercontainerobjects.util.Methods.isOfReturnType
 import static extension org.dockercontainerobjects.util.Methods.findMethods
 import static extension org.dockercontainerobjects.util.Optionals.unsure
 import static extension org.dockercontainerobjects.util.Predicates.operator_and
+import static extension org.dockercontainerobjects.util.Strings.toSnakeCase
 import static extension org.dockercontainerobjects.util.Strings.operator_tripleLessThan
 
 import java.lang.^annotation.Annotation
@@ -45,23 +43,22 @@ import java.util.List
 import java.util.Map
 import java.util.UUID
 import java.util.stream.Collectors
-import javax.inject.Inject
-import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.exception.DockerException
 import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.model.NetworkSettings
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
-import org.dockercontainerobjects.ContainerObjectsEnvironment.ContainerRegistrationInfo
-import org.dockercontainerobjects.ContainerObjectsEnvironment.ImageRegistrationInfo
-import org.dockercontainerobjects.ContainerObjectsEnvironment.RegistrationInfo
 import org.dockercontainerobjects.annotations.AfterContainerCreated
 import org.dockercontainerobjects.annotations.AfterContainerRemoved
 import org.dockercontainerobjects.annotations.AfterContainerStarted
 import org.dockercontainerobjects.annotations.AfterContainerStopped
 import org.dockercontainerobjects.annotations.AfterImageBuilt
+import org.dockercontainerobjects.annotations.AfterImagePrepared
+import org.dockercontainerobjects.annotations.AfterImageReleased
 import org.dockercontainerobjects.annotations.AfterImageRemoved
 import org.dockercontainerobjects.annotations.BeforeBuildingImage
 import org.dockercontainerobjects.annotations.BeforeCreatingContainer
+import org.dockercontainerobjects.annotations.BeforeReleasingImage
+import org.dockercontainerobjects.annotations.BeforePreparingImage
 import org.dockercontainerobjects.annotations.BeforeRemovingContainer
 import org.dockercontainerobjects.annotations.BeforeRemovingImage
 import org.dockercontainerobjects.annotations.BeforeStartingContainer
@@ -69,18 +66,16 @@ import org.dockercontainerobjects.annotations.BeforeStoppingContainer
 import org.dockercontainerobjects.annotations.BuildImage
 import org.dockercontainerobjects.annotations.BuildImageContent
 import org.dockercontainerobjects.annotations.BuildImageContentEntry
-import org.dockercontainerobjects.annotations.ContainerAddress
-import org.dockercontainerobjects.annotations.ContainerId
 import org.dockercontainerobjects.annotations.Environment
 import org.dockercontainerobjects.annotations.EnvironmentEntry
 import org.dockercontainerobjects.annotations.RegistryImage
+import org.eclipse.xtend.lib.annotations.Accessors
 import org.slf4j.LoggerFactory
 
 class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
     public static val IMAGE_TAG_DYNAMIC_PLACEHOLDER = "*"
     private static val IMAGE_TAG_DEFAULT_TEMPLATE = "%s_%s:latest"
-    private static val char UNDERSCORE = '_'
 
     public static val SCHEME_PATH_SEPARATOR = "://"
 
@@ -108,60 +103,37 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
     }
 
     override <T> create(Class<T> containerType) {
-        // create container instance
-        val containerInstance = containerType.instantiate
-
-        // initialize containers in instance fields
-        enhancer.setupInstance(containerInstance)
-
-        // injecting non-container attributes
-        containerInstance.updateFields(onInstance && ofType(DockerClient) && annotatedWith(Inject), constant(env.dockerClient))
-        containerInstance.updateFields(onInstance && ofType(ContainerObjectsEnvironment) && annotatedWith(Inject), constant(env))
-        containerInstance.updateFields(onInstance && ofType(ContainerObjectsManager) && annotatedWith(Inject), constant(this))
-
-        // find or prepare the container image
-        val imageInfo = containerInstance.prepareImage
-
-        // create container
-        val containerInfo = containerInstance.createContainer(imageInfo)
-
+        val ctx = new ContainerObjectContextImpl<T>(env, containerType)
+        // instance creation stage
+        ctx.createInstance
+        // image preparation stage
+        ctx.prepareImage
+        // container creation stage
+        ctx.createContainer
+        // container started stage
+        ctx.startContainer
         // register container
-        val info = new RegistrationInfo(imageInfo, containerInfo)
-        registerContainer(info)
+        registerContainerObject(ctx)
 
-        // start container
-        containerInstance.startContainer(containerInfo)
-
-        containerInstance
+        ctx.instance
     }
 
-    override destroy(Object containerInstance) {
-        val info = containerInstance.registrationInfo
+    override <T> destroy(T containerInstance) {
+        val ctx = containerInstance.containerObjectRegistration as ContainerObjectContextImpl<T>
+        unregisterContainerObject(ctx)
 
-        // stop container
-        containerInstance.stopContainer(info.container)
-
-        // remove container
-        containerInstance.removeContainer(info.container)
-
-        // optional image disposal
-        containerInstance.teardownImage(info.image)
-
-        // destroy container instance
-        unregisterContainer(containerInstance)
-
-        // cleanup non-container attributes
-        containerInstance.updateFields(onInstance && ofType(DockerClient) && annotatedWith(Inject), nil)
-        containerInstance.updateFields(onInstance && ofType(ContainerObjectsEnvironment) && annotatedWith(Inject), nil)
-        containerInstance.updateFields(onInstance && ofType(ContainerObjectsManager) && annotatedWith(Inject), nil)
-
-        // destroy containers in instance fields
-        enhancer.teardownInstance(containerInstance)
+        // container stopping stage
+        ctx.stopContainer
+        // container removing stage
+        ctx.removeContainer
+        // image release stage
+        ctx.teardownImage
+        // instance discarded stage
+        ctx.discardInstance
     }
 
     override getContainerId(Object containerInstance) {
-        val info = containerInstance.registrationInfo
-        if (info !== null) info.container.id
+        containerInstance.containerObjectRegistration.containerId
     }
 
     override getContainerStatus(Object containerInstance) {
@@ -177,15 +149,31 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
     }
 
     override getContainerNetworkSettings(Object containerInstance) {
-        dockerClient.inspectContainer(containerInstance.containerId).networkSettings
+        containerInstance.containerObjectRegistration.networkSettings
     }
 
     override <ADDR extends InetAddress> getContainerAddress(Object containerInstance, Class<ADDR> addrType) {
         containerInstance.containerNetworkSettings.inetAddressOfType(addrType)
     }
 
-    private def prepareImage(Object containerInstance) {
-        val containerType = containerInstance.class
+    private static def <T> void processLifecycleStage(ContainerObjectContextImpl<T> ctx, ContainerObjectLifecycleStage stage) {
+        ctx.stage = stage
+        ExtensionManager.instance.updateContainerObjectFields(ctx)
+    }
+
+    private static def <T> void createInstance(ContainerObjectContextImpl<T> ctx) {
+        // create container instance
+        ctx.instance = ctx.type.instantiate
+
+        // initialize containers in instance fields
+        ctx.environment.enhancer.setupInstance(ctx.instance)
+        ctx.processLifecycleStage(INSTANCE_CREATED)
+    }
+
+    private static def <T> void prepareImage(ContainerObjectContextImpl<T> ctx) {
+        val containerType = ctx.type
+        val containerInstance = ctx.instance
+        containerInstance.invokeContainerLifecycleListeners(BeforePreparingImage)
         l.debug [ "preparing image for container class '%s'" <<< containerType.simpleName ]
         // check for image from annotation or method
         val registryImageAnnotation = containerType.getAnnotation(RegistryImage).unsure
@@ -286,10 +274,10 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
             l.debug [ "image for container class '%s' will be build and tagged as '%s'" <<< #[containerType.simpleName, cleanImageTag] ]
             val generatedImageId =
                 if (imageRef instanceof File)
-                    dockerClient.buildImage(imageRef, cleanImageTag, forcePull)
+                    ctx.environment.dockerClient.buildImage(imageRef, cleanImageTag, forcePull)
                 else {
                     val tar = buildDockerTAR(imageRef, content, containerType)
-                    dockerClient.buildImage(tar, cleanImageTag, forcePull)
+                    ctx.environment.dockerClient.buildImage(tar, cleanImageTag, forcePull)
                 }
             l.debug [ "image for container class '%s' build with id '%s' and tagged as '%s'" <<< #[containerType.simpleName, generatedImageId, cleanImageTag] ]
             imageId = cleanImageTag
@@ -300,33 +288,35 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
         val imagePresent = imageBuilt ||
             try {
-                imageId = dockerClient.inspectImage(imageId).id
+                imageId = ctx.environment.dockerClient.inspectImage(imageId).id
                 true
             } catch (NotFoundException ex) {
                 false
             }
         if (imagePresent && !imageBuilt) autoRemove = false
         if (forcePull || !imagePresent) {
-            imageId = dockerClient.pullImage(imageId).id
+            imageId = ctx.environment.dockerClient.pullImage(imageId).id
         }
 
-        new ImageRegistrationInfo(imageId, false, autoRemove)
+        ctx.imageId = imageId
+        ctx.autoRemoveImage = autoRemove
+        ctx.processLifecycleStage(IMAGE_PREPARED)
+        containerInstance.invokeContainerLifecycleListeners(AfterImagePrepared)
     }
 
-    private def createContainer(Object containerInstance, ImageRegistrationInfo imageInfo) {
+    private static def <T> void createContainer(ContainerObjectContextImpl<T> ctx) {
+        val containerInstance = ctx.instance
         containerInstance.invokeContainerLifecycleListeners(BeforeCreatingContainer)
 
-        val environment = prepareContainerEnvironment(containerInstance)
-        val containerId = dockerClient.createContainer(imageInfo.id, environment).id
-        containerInstance.updateFields(
-            onInstance && ofType(String) && annotatedWith(Inject, ContainerId), constant(containerId))
+        val environment = collectContainerEnvironmentVariables(containerInstance)
+        val containerId = ctx.environment.dockerClient.createContainer(ctx.imageId, environment).id
 
+        ctx.containerId = containerId
+        ctx.processLifecycleStage(CONTAINER_CREATED)
         containerInstance.invokeContainerLifecycleListeners(AfterContainerCreated)
-
-        new ContainerRegistrationInfo(containerId, containerInstance)
     }
 
-    private def prepareContainerEnvironment(Object containerInstance) {
+    private static def collectContainerEnvironmentVariables(Object containerInstance) {
         val containerType = containerInstance.class
 
         val List<String> environment = new ArrayList
@@ -350,47 +340,60 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
         environment
     }
 
-    private def startContainer(Object containerInstance, ContainerRegistrationInfo containerInfo) {
+    private static def <T> void startContainer(ContainerObjectContextImpl<T> ctx) {
+        val containerInstance = ctx.instance
         containerInstance.invokeContainerLifecycleListeners(BeforeStartingContainer)
-        val response = dockerClient.startContainer(containerInfo.id)
-        containerInstance.updateFields(
-            onInstance && ofType(NetworkSettings) && annotatedWith(Inject), constant(response.networkSettings))
-        containerInstance.updateFields(onInstance && annotatedWith(Inject, ContainerAddress)) [ type|
-            response.networkSettings.inetAddressOfType(type)
-        ]
+        val response = ctx.environment.dockerClient.startContainer(ctx.containerId)
+
+        ctx.networkSettings = response.networkSettings
+        ctx.processLifecycleStage(CONTAINER_STARTED)
         containerInstance.invokeContainerLifecycleListeners(AfterContainerStarted)
     }
 
-    private def stopContainer(Object containerInstance, ContainerRegistrationInfo containerInfo) {
+    private static def <T> void stopContainer(ContainerObjectContextImpl<T> ctx) {
+        val containerInstance = ctx.instance
         containerInstance.invokeContainerLifecycleListeners(BeforeStoppingContainer)
-        dockerClient.stopContainer(containerInfo.id)
+        ctx.environment.dockerClient.stopContainer(ctx.containerId)
+
+        ctx.processLifecycleStage(CONTAINER_STOPPED)
         containerInstance.invokeContainerLifecycleListeners(AfterContainerStopped)
-        containerInstance.updateFields(onInstance && ofType(NetworkSettings) && annotatedWith(Inject), nil)
-        containerInstance.updateFields(onInstance && annotatedWith(Inject, ContainerAddress), nil)
-    }
+     }
 
-    private def removeContainer(Object containerInstance, ContainerRegistrationInfo containerInfo) {
+    private static def <T> void removeContainer(ContainerObjectContextImpl<T> ctx) {
+        val containerInstance = ctx.instance
         containerInstance.invokeContainerLifecycleListeners(BeforeRemovingContainer)
-        dockerClient.removeContainer(containerInfo.id)
+        ctx.environment.dockerClient.removeContainer(ctx.containerId)
+
+        ctx.processLifecycleStage(CONTAINER_REMOVED)
         containerInstance.invokeContainerLifecycleListeners(AfterContainerRemoved)
-        containerInstance.updateFields(onInstance && ofType(String) && annotatedWith(Inject, ContainerId), nil)
     }
 
-    private def teardownImage(Object containerInstance, ImageRegistrationInfo imageInfo) {
+    private static def <T> void teardownImage(ContainerObjectContextImpl<T> ctx) {
+        val containerInstance = ctx.instance
+        containerInstance.invokeContainerLifecycleListeners(BeforeReleasingImage)
         // try to remove image if requested
-        if (imageInfo.autoRemove)
+        if (ctx.autoRemoveImage)
             try {
                 containerInstance.invokeContainerLifecycleListeners(BeforeRemovingImage)
-                dockerClient.removeImage(imageInfo.id)
+                ctx.environment.dockerClient.removeImage(ctx.imageId)
                 containerInstance.invokeContainerLifecycleListeners(AfterImageRemoved)
             } catch (NotFoundException e) {
                 // if the image is already removed, log and ignore
-                l.warn("Image '%s' requested to be auto-removed, but was not found" <<< #[imageInfo.id], e)
+                l.warn("Image '%s' requested to be auto-removed, but was not found" <<< ctx.imageId, e)
             } catch (DockerException e) {
                 // TODO check if there is a more specific exception for this case
                 // if the image is still in use, log and ignore
-                l.warn("Image '%s' requested to be auto-removed, but seems to be still in use" <<< #[imageInfo.id], e)
+                l.warn("Image '%s' requested to be auto-removed, but seems to be still in use" <<< ctx.imageId, e)
             }
+
+        ctx.processLifecycleStage(IMAGE_RELEASED)
+        containerInstance.invokeContainerLifecycleListeners(AfterImageReleased)
+    }
+
+    private static def <T> void discardInstance(ContainerObjectContextImpl<T> ctx) {
+        val containerInstance = ctx.instance
+        ctx.environment.enhancer.teardownInstance(containerInstance)
+        ctx.processLifecycleStage(INSTANCE_DISCARDED)
     }
 
     private static def void invokeContainerLifecycleListeners(Object containerInstance,
@@ -443,22 +446,24 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
     }
 
     private static def defaultImageTag(Class<?> containerType) {
-        String.format(IMAGE_TAG_DEFAULT_TEMPLATE, containerType.simpleName.toLowerWithUnderscoreCase, IMAGE_TAG_DYNAMIC_PLACEHOLDER)
+        String.format(IMAGE_TAG_DEFAULT_TEMPLATE, containerType.simpleName.toSnakeCase, IMAGE_TAG_DYNAMIC_PLACEHOLDER)
     }
 
-    private static def toLowerWithUnderscoreCase(String id) {
-        val result = new StringBuilder()
-        val chars = id.toCharArray
-        for (var index = 0; index < chars.length; index++) {
-            val ch = chars.get(index)
-            if (Character.isUpperCase(ch)) {
-                if (index > 0)
-                    result.append(UNDERSCORE)
-                val char lower = Character.toLowerCase(ch)
-                result.append(lower)
-            } else
-                result.append(ch)
+    @SuppressWarnings("MissingOverride")
+    protected static class ContainerObjectContextImpl<T> implements ContainerObjectContext<T> {
+
+        @Accessors(PUBLIC_GETTER) val ContainerObjectsEnvironment environment
+        @Accessors(PUBLIC_GETTER) val Class<T> type
+        @Accessors(#[PUBLIC_GETTER, PROTECTED_SETTER]) var T instance
+        @Accessors(#[PUBLIC_GETTER, PROTECTED_SETTER]) var ContainerObjectLifecycleStage stage
+        @Accessors(#[PUBLIC_GETTER, PROTECTED_SETTER]) var NetworkSettings networkSettings
+        @Accessors(#[PUBLIC_GETTER, PROTECTED_SETTER]) var String imageId
+        @Accessors(#[PUBLIC_GETTER, PROTECTED_SETTER]) var boolean autoRemoveImage
+        @Accessors(#[PUBLIC_GETTER, PROTECTED_SETTER]) var String containerId
+
+        new(ContainerObjectsEnvironment environment, Class<T> type) {
+            this.environment = environment
+            this.type = type
         }
-        result.toString
     }
 }

@@ -10,7 +10,7 @@ interface ContainerObjectsManager extends AutoCloseable {
     }
 
     def <T> T create(Class<T> containerType)
-    def void destroy(Object containerInstance)
+    def <T> void destroy(T containerInstance)
 
     def String getContainerId(Object containerInstance)
     def ContainerStatus getContainerStatus(Object containerInstance)
