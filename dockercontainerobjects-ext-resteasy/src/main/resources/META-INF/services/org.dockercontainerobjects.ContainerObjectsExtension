@@ -1,0 +1,1 @@
+org.dockercontainerobjects.resteasy.ResteasyClientInjectorExtension # Injector for ResteasyClientBuilder & ResteasyClient

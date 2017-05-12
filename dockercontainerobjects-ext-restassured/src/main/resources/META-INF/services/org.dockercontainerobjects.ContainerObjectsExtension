@@ -1,0 +1,1 @@
+org.dockercontainerobjects.restassured.RestAssuredInjectorExtension # Injector for RequestSpecification
