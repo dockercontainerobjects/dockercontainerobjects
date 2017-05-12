@@ -2,20 +2,18 @@ package org.dockercontainerobjects.extensions
 
 import static extension org.dockercontainerobjects.docker.DockerClientExtensions.inetAddressOfType
 import static extension org.dockercontainerobjects.util.Predicates.operator_and
-import static extension org.dockercontainerobjects.util.Predicates.operator_or
 
 import static org.dockercontainerobjects.util.Fields.annotatedWith
-import static org.dockercontainerobjects.util.Fields.ofType
+import static org.dockercontainerobjects.util.Fields.ofOneType
 
 import java.lang.reflect.Field
 import java.net.InetAddress
-import java.util.function.Predicate
 import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.annotations.ContainerAddress
 
 class ContainerAddressInjectorExtension extends BaseContainerObjectsExtension {
 
-    private static val Predicate<Field> FIELD_SELECTOR = (ofType(String) || ofType(InetAddress)) && annotatedWith(ContainerAddress)
+    private static val FIELD_SELECTOR = ofOneType(String, InetAddress) && annotatedWith(ContainerAddress)
 
     override <T> getFieldSelectorOnContainerStarted(ContainerObjectContext<T> ctx) {
         FIELD_SELECTOR
