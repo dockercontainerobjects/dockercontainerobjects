@@ -3,4 +3,6 @@ dependencies {
     api project(':dockercontainerobjects-core')
     implementation "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
     implementation "io.rest-assured:rest-assured:${restassuredVersion}"
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitJupiterVersion}"
 }
