@@ -74,21 +74,14 @@ import org.slf4j.LoggerFactory
 
 class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
-    public static val IMAGE_TAG_DYNAMIC_PLACEHOLDER = "*"
     private static val IMAGE_TAG_DEFAULT_TEMPLATE = "%s_%s:latest"
 
     public static val SCHEME_PATH_SEPARATOR = "://"
 
-    public static val SCHEME_CLASSPATH = "classpath"
     public static val SCHEME_CLASSPATH_PREFIX = SCHEME_CLASSPATH+SCHEME_PATH_SEPARATOR
-    public static val SCHEME_FILE = "file"
     public static val SCHEME_FILE_PREFIX = SCHEME_FILE+SCHEME_PATH_SEPARATOR
-    public static val SCHEME_HTTP = "http"
     public static val SCHEME_HTTP_PREFIX = SCHEME_HTTP+SCHEME_PATH_SEPARATOR
-    public static val SCHEME_HTTPS = "https"
     public static val SCHEME_HTTPS_PREFIX = SCHEME_HTTPS+SCHEME_PATH_SEPARATOR
-
-    public static val DOCKERFILE_DEFAULT_NAME = "Dockerfile"
 
     private static val l = LoggerFactory.getLogger(ContainerObjectsManagerImpl)
 
