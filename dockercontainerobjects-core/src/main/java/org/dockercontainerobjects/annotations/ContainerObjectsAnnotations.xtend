@@ -77,6 +77,18 @@ annotation AfterContainerStopped {}
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
+annotation BeforeRestartingContainer {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
+annotation AfterContainerRestarted {}
+
+@Documented
+@Retention(RUNTIME)
+@Target(METHOD)
+@Inherited
 annotation BeforeRemovingContainer {}
 
 @Documented

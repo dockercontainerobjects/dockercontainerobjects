@@ -49,6 +49,7 @@ import com.github.dockerjava.api.model.NetworkSettings
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.dockercontainerobjects.annotations.AfterContainerCreated
 import org.dockercontainerobjects.annotations.AfterContainerRemoved
+import org.dockercontainerobjects.annotations.AfterContainerRestarted
 import org.dockercontainerobjects.annotations.AfterContainerStarted
 import org.dockercontainerobjects.annotations.AfterContainerStopped
 import org.dockercontainerobjects.annotations.AfterImageBuilt
@@ -58,6 +59,7 @@ import org.dockercontainerobjects.annotations.AfterImageRemoved
 import org.dockercontainerobjects.annotations.BeforeBuildingImage
 import org.dockercontainerobjects.annotations.BeforeCreatingContainer
 import org.dockercontainerobjects.annotations.BeforeReleasingImage
+import org.dockercontainerobjects.annotations.BeforeRestartingContainer
 import org.dockercontainerobjects.annotations.BeforePreparingImage
 import org.dockercontainerobjects.annotations.BeforeRemovingContainer
 import org.dockercontainerobjects.annotations.BeforeRemovingImage
@@ -123,6 +125,11 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
         ctx.teardownImage
         // instance discarded stage
         ctx.discardInstance
+    }
+
+    override <T> restart(T containerInstance) {
+        val ctx = containerInstance.containerObjectRegistration as ContainerObjectContextImpl<T>
+        ctx.restartContainer
     }
 
     override getContainerId(Object containerInstance) {
@@ -350,7 +357,15 @@ class ContainerObjectsManagerImpl implements ContainerObjectsManager {
 
         ctx.processLifecycleStage(CONTAINER_STOPPED)
         containerInstance.invokeContainerLifecycleListeners(AfterContainerStopped)
-     }
+    }
+
+    private static def <T> restartContainer(ContainerObjectContextImpl<T> ctx) {
+        val containerInstance = ctx.instance
+        containerInstance.invokeContainerLifecycleListeners(BeforeRestartingContainer)
+        ctx.stopContainer
+        ctx.startContainer
+        containerInstance.invokeContainerLifecycleListeners(AfterContainerRestarted)
+    }
 
     private static def <T> void removeContainer(ContainerObjectContextImpl<T> ctx) {
         val containerInstance = ctx.instance
