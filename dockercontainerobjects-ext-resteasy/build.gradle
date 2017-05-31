@@ -2,8 +2,6 @@
 // NOTES:
 // [1] the dependency list excludes log4j, library clients must make a decision on the logging framework to use
 //     at runtime, clients need to include log4j, logback, log4j-over-slf4j or any other implementation of log4j api
-// [2] tests are using JUnit classic to support running tests inside IDEs still not supporting JUnit Platform
-//     this dependency can be removed if only Gradle or JUnit Platform support is desired
 
 dependencies {
     api project(':dockercontainerobjects-core')
@@ -12,8 +10,6 @@ dependencies {
     implementation "org.jboss.resteasy:resteasy-client:${project.resteasyVersion}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitJupiterVersion}"
-    testImplementation "junit:junit:${project.junitClassicVersion}" // [2]
-    testImplementation "org.junit.platform:junit-platform-runner:${project.junitPlatformVersion}" // [2]
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitJupiterVersion}"
     testRuntimeOnly "ch.qos.logback:logback-classic:${project.logbackVersion}" // [1]

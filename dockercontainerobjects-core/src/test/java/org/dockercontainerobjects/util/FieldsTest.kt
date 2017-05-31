@@ -10,11 +10,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import org.junit.platform.runner.JUnitPlatform
-import org.junit.runner.RunWith
 import java.util.stream.Collectors
 
-@RunWith(JUnitPlatform::class)
 @DisplayName("Fields util tests")
 @Tag("util")
 class FieldsTest {

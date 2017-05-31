@@ -9,12 +9,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import org.junit.platform.runner.JUnitPlatform
-import org.junit.runner.RunWith
 import java.lang.reflect.Field
 import javax.annotation.Resource
 
-@RunWith(JUnitPlatform::class)
 @DisplayName("Accessible objects util tests")
 @Tag("util")
 class AccessibleObjectsTest {

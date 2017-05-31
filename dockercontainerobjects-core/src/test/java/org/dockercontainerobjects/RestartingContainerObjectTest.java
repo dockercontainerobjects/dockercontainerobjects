@@ -16,10 +16,7 @@ import org.dockercontainerobjects.annotations.RegistryImage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
-@RunWith(JUnitPlatform.class)
 @DisplayName("Restarting container object tests")
 @Tag("docker")
 public class RestartingContainerObjectTest extends ContainerObjectManagerBasedTest {

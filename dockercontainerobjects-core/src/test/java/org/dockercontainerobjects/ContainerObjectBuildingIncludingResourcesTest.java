@@ -10,10 +10,7 @@ import org.dockercontainerobjects.annotations.BuildImageContentEntry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
-@RunWith(JUnitPlatform.class)
 @DisplayName("Container object building with additional content tests")
 @Tag("docker")
 public class ContainerObjectBuildingIncludingResourcesTest extends WebContainerObjectManagerBasedTest {
