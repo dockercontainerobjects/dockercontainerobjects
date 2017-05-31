@@ -13,6 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import kotlin.Unit;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
@@ -27,7 +28,7 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 @RunWith(JUnitPlatform.class)
-@DisplayName("Compression tests")
+@DisplayName("Compression util tests")
 @Tag("util")
 public class CompressExtensionsTest {
 
@@ -37,21 +38,22 @@ public class CompressExtensionsTest {
     @Test
     @DisplayName("withEntry should fail if any parameter is null")
     void allArgsRequiredForEntryCreation() {
-        assertThrows(NullPointerException.class, () -> withEntry(null, TEST_FILENAME, new byte[]{}));
-        assertThrows(NullPointerException.class, () -> withEntry(new TarArchiveOutputStream(new ByteArrayOutputStream()), null, new byte[]{}));
-        assertThrows(NullPointerException.class, () -> withEntry(new TarArchiveOutputStream(new ByteArrayOutputStream()), TEST_FILENAME, (byte[])null));
+        assertThrows(IllegalArgumentException.class, () -> withEntry(null, TEST_FILENAME, new byte[]{}));
+        assertThrows(IllegalArgumentException.class, () -> withEntry(new TarArchiveOutputStream(new ByteArrayOutputStream()), null, new byte[]{}));
+        assertThrows(IllegalArgumentException.class, () -> withEntry(new TarArchiveOutputStream(new ByteArrayOutputStream()), TEST_FILENAME, (byte[])null));
     }
 
     @Test
     @DisplayName("TAR with null content provider should fail")
     void tarWithNullProviderShouldFail() {
-        assertThrows(NullPointerException.class, () -> buildTAR(null, false));
+        assertThrows(IllegalArgumentException.class, () -> buildTAR(null, false));
     }
 
     @Test
     @DisplayName("TAR with no content should fail")
     void tarWithNoContentShouldFail() {
-        assertThrows(IllegalArgumentException.class, () -> buildTAR(tar -> {}, false));
+        assertThrows(IllegalArgumentException.class, () -> buildTAR(
+                tar -> Unit.INSTANCE, false));
     }
 
     @Test
@@ -70,6 +72,7 @@ public class CompressExtensionsTest {
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
+                        return Unit.INSTANCE;
                     }, false);
             assertNotNull(data);
             ArchiveInputStream in = new ArchiveStreamFactory().createArchiveInputStream(new ByteArrayInputStream(data));

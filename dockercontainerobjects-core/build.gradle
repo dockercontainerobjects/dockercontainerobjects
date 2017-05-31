@@ -9,7 +9,7 @@ dependencies {
     api "com.github.docker-java:docker-java:${project.dockerJavaVersion}" // [1]
     api "javax.inject:javax.inject:${project.javaxInjectVersion}"
 
-    implementation "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${project.kotlinVersion}"
     implementation "org.slf4j:slf4j-api:${project.slf4jVersion}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitJupiterVersion}"

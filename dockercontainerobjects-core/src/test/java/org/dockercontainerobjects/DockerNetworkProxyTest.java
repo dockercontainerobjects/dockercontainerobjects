@@ -25,7 +25,7 @@ public class DockerNetworkProxyTest {
     void noProxy() throws IOException {
         assumeTrue( System.getenv(ContainerObjectsEnvironmentFactory.ENV_DOCKERNETWORKPROXY_TYPE) == null);
 
-        try (ContainerObjectsEnvironment env = ContainerObjectsEnvironmentFactory.getInstance().newEnvironment()) {
+        try (ContainerObjectsEnvironment env = ContainerObjectsEnvironmentFactory.INSTANCE.newEnvironment()) {
             assertEquals(Proxy.NO_PROXY, env.getDockerNetworkProxy());
         }
     }
@@ -39,7 +39,7 @@ public class DockerNetworkProxyTest {
         Properties properties = new Properties();
         properties.setProperty("org.dockercontainerobjects.dockernetworkproxy.type", "socks");
 
-        try (ContainerObjectsEnvironment env = ContainerObjectsEnvironmentFactory.getInstance().newEnvironment(properties)) {
+        try (ContainerObjectsEnvironment env = ContainerObjectsEnvironmentFactory.INSTANCE.newEnvironment(properties)) {
             Proxy proxy = env.getDockerNetworkProxy();
             assertNotNull(proxy);
             assertEquals(Proxy.Type.SOCKS, proxy.type());
@@ -58,7 +58,7 @@ public class DockerNetworkProxyTest {
         Properties properties = new Properties();
         properties.setProperty("org.dockercontainerobjects.dockernetworkproxy.type", "http");
 
-        try (ContainerObjectsEnvironment env = ContainerObjectsEnvironmentFactory.getInstance().newEnvironment(properties)) {
+        try (ContainerObjectsEnvironment env = ContainerObjectsEnvironmentFactory.INSTANCE.newEnvironment(properties)) {
             Proxy proxy = env.getDockerNetworkProxy();
             assertNotNull(proxy);
             assertEquals(Proxy.Type.HTTP, proxy.type());

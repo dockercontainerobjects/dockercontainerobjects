@@ -18,13 +18,13 @@ public abstract class ContainerObjectManagerBasedTest {
 
     @BeforeAll
     static void createManager() {
-        env = ContainerObjectsEnvironmentFactory.getInstance().newEnvironment();
+        env = ContainerObjectsEnvironmentFactory.INSTANCE.newEnvironment();
         manager = env.getManager();
     }
 
     @AfterAll
     static void closeManager() throws Exception {
-        env.close();
+        if (env != null) env.close();
     }
 
     protected static <T> void assertWithContainerInstance(Class<T> containerType, Consumer<T> callback) {

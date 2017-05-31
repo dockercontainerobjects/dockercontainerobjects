@@ -7,8 +7,8 @@ dependencies {
     api project(':dockercontainerobjects-core')
     api "junit:junit:${project.junitClassicVersion}"
 
-    implementation "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
-    implementation "org.slf4j:slf4j-api:${project.slf4jVersion}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${project.kotlinVersion}"
+    implementation "org.slf4j:slf4j-api:${project.slf4jVersion}"// [1]
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${project.junitVintageVersion}"
     testRuntimeOnly "ch.qos.logback:logback-classic:${project.logbackVersion}" // [1]

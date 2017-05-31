@@ -26,7 +26,7 @@ public class SimpleContainerObjectRegistryImageMethodTest extends ContainerObjec
 
     @AfterAll
     static void destroyContainer() {
-        manager.destroy(container);
+        if (container != null) manager.destroy(container);
     }
 
     @Test

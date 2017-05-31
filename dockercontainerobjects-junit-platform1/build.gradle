@@ -9,8 +9,8 @@ dependencies {
     api project(':dockercontainerobjects-core')
     api "org.junit.jupiter:junit-jupiter-api:${project.junitJupiterVersion}"
 
-    implementation "org.eclipse.xtend:org.eclipse.xtend.lib:${xtendVersion}"
-    implementation "org.slf4j:slf4j-api:${project.slf4jVersion}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${project.kotlinVersion}"
+    implementation "org.slf4j:slf4j-api:${project.slf4jVersion}" // [1]
 
     testImplementation "junit:junit:${project.junitClassicVersion}" // [2]
     testImplementation "org.junit.platform:junit-platform-runner:${project.junitPlatformVersion}" // [2]
