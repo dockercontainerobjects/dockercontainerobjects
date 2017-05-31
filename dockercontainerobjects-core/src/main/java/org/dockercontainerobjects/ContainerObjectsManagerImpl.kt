@@ -65,7 +65,6 @@ import org.dockercontainerobjects.util.Methods.expectingNoParameters
 import org.dockercontainerobjects.util.Methods.findMethods
 import org.dockercontainerobjects.util.Methods.invokeInstanceMethods
 import org.dockercontainerobjects.util.Methods.isOfReturnType
-import org.dockercontainerobjects.util.Optionals.unsure
 import org.dockercontainerobjects.util.Predicates.and
 import org.dockercontainerobjects.util.Strings.toSnakeCase
 import java.io.File
@@ -109,18 +108,18 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             containerInstance.invokeContainerLifecycleListeners<BeforePreparingImage>()
             l.debug { "preparing image for container class '${containerType.simpleName}'" }
             // check for image from annotation or method
-            val registryImageAnnotation = containerType.getAnnotation(RegistryImage::class.java).unsure()
+            val registryImageAnnotation = containerType.getAnnotation(RegistryImage::class.java)
             val registryImageMethods = containerType.findMethods(expectingNoParameters() and annotatedWith<Method>(RegistryImage::class))
                     .stream()
                     .collect(Collectors.toList())
-            val buildImageAnnotation = containerType.getAnnotation(BuildImage::class.java).unsure()
+            val buildImageAnnotation = containerType.getAnnotation(BuildImage::class.java)
             val buildImageMethods = containerType.findMethods(expectingNoParameters() and annotatedWith<Method>(BuildImage::class))
                     .stream()
                     .collect(Collectors.toList())
             var options = 0
-            if (registryImageAnnotation.isPresent) options++
+            if (registryImageAnnotation !== null) options++
             options += registryImageMethods.size
-            if (buildImageAnnotation.isPresent) options++
+            if (buildImageAnnotation !== null) options++
             options += buildImageMethods.size
             if (options != 1)
                 throw IllegalArgumentException(
@@ -130,14 +129,13 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             var autoRemove: Boolean = false
             var imageBuilt: Boolean = false
 
-            if (registryImageAnnotation.isPresent) {
-                val registryImageAnnotationValue = registryImageAnnotation.get()
-                imageId = registryImageAnnotationValue.value
+            if (registryImageAnnotation !== null) {
+                imageId = registryImageAnnotation.value
                 if (imageId.isNullOrEmpty())
                     throw IllegalArgumentException(
                             "Annotation '${RegistryImage::class.java.simpleName}' on class '${containerType.simpleName}' must define a value to be used to define the image to use")
-                forcePull = registryImageAnnotationValue.forcePull
-                autoRemove = registryImageAnnotationValue.autoRemove
+                forcePull = registryImageAnnotation.forcePull
+                autoRemove = registryImageAnnotation.autoRemove
             } else if (registryImageMethods.isNotEmpty()) {
                 val registryImageMethod = registryImageMethods[0]
                 if (!registryImageMethod.isOfReturnType<String>())
@@ -158,13 +156,12 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
                 containerInstance.invokeContainerLifecycleListeners<BeforeBuildingImage>()
                 var imageRef: Any? = null
                 var imageTag: String? = null
-                if (buildImageAnnotation.isPresent) {
-                    val buildImageAnnotationValue = buildImageAnnotation.get()
-                    imageRef = buildImageAnnotationValue.value
+                if (buildImageAnnotation !== null) {
+                    imageRef = buildImageAnnotation.value
                     if (imageRef.isEmpty())
                         throw IllegalArgumentException(
                                 "Annotation '${BuildImage::class.java.simpleName}' on class '${containerType.simpleName}' must define a non-empty value pointing to a Dockerfile")
-                    imageTag = buildImageAnnotationValue.tag
+                    imageTag = buildImageAnnotation.tag
                 } else if (buildImageMethods.isNotEmpty()) {
                     val buildImageMethod = buildImageMethods[0]
                     listOf(String::class, URI::class, URL::class, File::class, InputStream::class).stream().filter { buildImageMethod.isOfReturnType(it) }.findAny().orElseThrow {

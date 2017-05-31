@@ -4,11 +4,9 @@ import org.dockercontainerobjects.util.AccessibleObjects.reachable
 import org.dockercontainerobjects.util.Loggers.debug
 import org.dockercontainerobjects.util.Loggers.loggerFor
 import org.dockercontainerobjects.util.Loggers.warn
-import org.dockercontainerobjects.util.Optionals.confirmed
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.Arrays
-import java.util.Optional
 import java.util.function.Predicate
 import java.util.stream.Collector
 import kotlin.reflect.KClass
@@ -70,30 +68,30 @@ object Methods {
     }
 
     fun <C: Any, T: Any, A: Any, R: Any> Class<C>.invokeMethods(
-            instance: Optional<C>,
+            instance: C?,
             methodSelector: Predicate<Method>,
-            parameterSupplier: Optional<(Method) -> Array<Any>> = Optional.empty(),
-            collector: Optional<Collector<T, A, R>> = Optional.empty()): R? {
-        val accum = collector.map { it.supplier().get() }.orElse(null)
+            parameterSupplier: ((Method) -> Array<Any>)? = null,
+            collector: Collector<T, A, R>? = null): R? {
+        val accum = collector?.supplier()?.get()
         findMethods(methodSelector).stream().forEach { method ->
-            val parameters = parameterSupplier.map { it.invoke(method) }.orElse(emptyArray())
+            val parameters = parameterSupplier?.invoke(method) ?: emptyArray()
             l.debug { "Invoking method '$method'" }
             @Suppress("UNCHECKED_CAST")
-            val result = method.call(instance.get(), *parameters) as T?
-            collector.ifPresent { it.accumulator().accept(accum, result) }
+            val result = method.call(instance, *parameters) as T?
+            collector?.accumulator()?.accept(accum, result)
         }
-        return collector.map { it.finisher().apply(accum) }.orElse(null)
+        return collector?.finisher()?.apply(accum)
     }
 
     inline fun <C: Any, T: Any, A: Any, R: Any> C.invokeInstanceMethods(
             methodSelector: Predicate<Method>,
-            parameterSupplier: Optional<(Method) -> Array<Any>> = Optional.empty(),
-            collector: Optional<Collector<T, A, R>> = Optional.empty()) =
-        javaClass.invokeMethods(this.confirmed(), methodSelector, parameterSupplier, collector)
+            noinline parameterSupplier: ((Method) -> Array<Any>)? = null,
+            collector: Collector<T, A, R>? = null) =
+        javaClass.invokeMethods(this, methodSelector, parameterSupplier, collector)
 
     inline fun <C: Any, T: Any, A: Any, R: Any> Class<C>.invokeClassMethods(
             methodSelector: Predicate<Method>,
-            parameterSupplier: Optional<(Method) -> Array<Any>> = Optional.empty(),
-            collector: Optional<Collector<T, A, R>> = Optional.empty()) =
-        invokeMethods(Optional.empty(), methodSelector, parameterSupplier, collector)
+            noinline parameterSupplier: ((Method) -> Array<Any>)? = null,
+            collector: Collector<T, A, R>? = null) =
+        invokeMethods(null, methodSelector, parameterSupplier, collector)
 }
