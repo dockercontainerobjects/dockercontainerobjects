@@ -11,7 +11,7 @@ import org.dockercontainerobjects.ContainerObjectLifecycleStage.INSTANCE_CREATED
 import org.dockercontainerobjects.ContainerObjectLifecycleStage.INSTANCE_DISCARDED
 import org.dockercontainerobjects.ContainerObjectsEnvironment
 import org.dockercontainerobjects.ContainerObjectsExtension
-import org.dockercontainerobjects.util.Predicates.nothing
+import org.dockercontainerobjects.util.nothing
 import java.lang.reflect.Field
 import java.util.function.Predicate
 

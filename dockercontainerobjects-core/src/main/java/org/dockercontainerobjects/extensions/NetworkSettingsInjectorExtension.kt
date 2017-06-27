@@ -2,7 +2,7 @@ package org.dockercontainerobjects.extensions
 
 import com.github.dockerjava.api.model.NetworkSettings
 import org.dockercontainerobjects.ContainerObjectContext
-import org.dockercontainerobjects.util.Fields.ofType
+import org.dockercontainerobjects.util.ofType
 import java.lang.reflect.Field
 
 class NetworkSettingsInjectorExtension: BaseContainerObjectsExtension() {

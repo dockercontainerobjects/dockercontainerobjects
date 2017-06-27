@@ -1,11 +1,11 @@
 package org.dockercontainerobjects
 
-import org.dockercontainerobjects.util.AccessibleObjects.annotatedWith
-import org.dockercontainerobjects.util.Fields.updateFields
-import org.dockercontainerobjects.util.Loggers.debug
-import org.dockercontainerobjects.util.Members.onInstance
-import org.dockercontainerobjects.util.Predicates.NOTHING
-import org.dockercontainerobjects.util.Predicates.and
+import org.dockercontainerobjects.util.NOTHING
+import org.dockercontainerobjects.util.and
+import org.dockercontainerobjects.util.annotatedWith
+import org.dockercontainerobjects.util.debug
+import org.dockercontainerobjects.util.onInstance
+import org.dockercontainerobjects.util.updateFields
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Field
 import java.util.ServiceLoader

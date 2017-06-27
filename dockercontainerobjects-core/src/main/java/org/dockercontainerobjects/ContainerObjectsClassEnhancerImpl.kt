@@ -1,16 +1,16 @@
 package org.dockercontainerobjects
 
 import org.dockercontainerobjects.annotations.ContainerObject
-import org.dockercontainerobjects.util.AccessibleObjects.annotatedWith
-import org.dockercontainerobjects.util.Fields.findFields
-import org.dockercontainerobjects.util.Fields.read
-import org.dockercontainerobjects.util.Fields.update
-import org.dockercontainerobjects.util.Loggers.debug
-import org.dockercontainerobjects.util.Loggers.loggerFor
-import org.dockercontainerobjects.util.Members.isReadOnly
-import org.dockercontainerobjects.util.Members.onClass
-import org.dockercontainerobjects.util.Members.onInstance
-import org.dockercontainerobjects.util.Predicates.and
+import org.dockercontainerobjects.util.and
+import org.dockercontainerobjects.util.annotatedWith
+import org.dockercontainerobjects.util.debug
+import org.dockercontainerobjects.util.findFields
+import org.dockercontainerobjects.util.isReadOnly
+import org.dockercontainerobjects.util.loggerFor
+import org.dockercontainerobjects.util.onClass
+import org.dockercontainerobjects.util.onInstance
+import org.dockercontainerobjects.util.read
+import org.dockercontainerobjects.util.update
 import java.io.IOException
 import java.lang.reflect.Field
 import java.util.function.Predicate
@@ -51,6 +51,7 @@ class ContainerObjectsClassEnhancerImpl(private val env: ContainerObjectsEnviron
         findFields(containerFieldSelector).stream().forEach { setupContainerField(instance, it) }
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun <T: Any> KClass<T>.setupContainerFields(instance: Any?, containerFieldSelector: Predicate<Field>) =
         java.setupContainerFields(instance, containerFieldSelector)
 
@@ -58,7 +59,8 @@ class ContainerObjectsClassEnhancerImpl(private val env: ContainerObjectsEnviron
         findFields(containerFieldSelector).stream().forEach { teardownContainerField(instance, it) }
     }
 
-    private fun <T: Any> KClass<T>.teardownContainerFields(instance: Any?, containerFieldSelector: Predicate<Field>) =
+    @Suppress("NOTHING_TO_INLINE")
+    inline private fun <T: Any> KClass<T>.teardownContainerFields(instance: Any?, containerFieldSelector: Predicate<Field>) =
         java.teardownContainerFields(instance, containerFieldSelector)
 
     private fun setupContainerField(instance: Any?, field: Field) {

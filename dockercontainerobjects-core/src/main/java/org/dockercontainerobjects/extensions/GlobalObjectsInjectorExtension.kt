@@ -4,7 +4,7 @@ import com.github.dockerjava.api.DockerClient
 import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.ContainerObjectsEnvironment
 import org.dockercontainerobjects.ContainerObjectsManager
-import org.dockercontainerobjects.util.Fields.ofOneType
+import org.dockercontainerobjects.util.ofOneType
 import java.lang.reflect.Field
 import java.net.Proxy
 

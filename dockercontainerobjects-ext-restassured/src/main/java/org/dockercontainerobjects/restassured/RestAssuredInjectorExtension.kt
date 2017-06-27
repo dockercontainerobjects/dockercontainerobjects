@@ -7,7 +7,7 @@ import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.ContainerObjectsManager
 import org.dockercontainerobjects.docker.DockerClientExtensions.inetAddress
 import org.dockercontainerobjects.extensions.BaseContainerObjectsExtension
-import org.dockercontainerobjects.util.Fields.ofType
+import org.dockercontainerobjects.util.ofType
 import java.lang.reflect.Field
 import java.net.InetSocketAddress
 import java.net.Proxy.Type.DIRECT

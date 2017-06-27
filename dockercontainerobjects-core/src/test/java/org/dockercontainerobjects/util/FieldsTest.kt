@@ -1,10 +1,5 @@
 package org.dockercontainerobjects.util
 
-import org.dockercontainerobjects.util.Arrays.stream
-import org.dockercontainerobjects.util.Fields.isOfOneType
-import org.dockercontainerobjects.util.Fields.isOfType
-import org.dockercontainerobjects.util.Fields.ofOneType
-import org.dockercontainerobjects.util.Fields.ofType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName

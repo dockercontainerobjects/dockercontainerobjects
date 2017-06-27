@@ -1,7 +1,5 @@
 package org.dockercontainerobjects.util
 
-import org.dockercontainerobjects.util.Strings.toCapitalCase
-import org.dockercontainerobjects.util.Strings.toSnakeCase
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag

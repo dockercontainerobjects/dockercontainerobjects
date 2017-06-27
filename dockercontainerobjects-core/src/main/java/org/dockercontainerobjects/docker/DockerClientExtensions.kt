@@ -10,9 +10,9 @@ import com.github.dockerjava.api.model.NetworkSettings
 import com.github.dockerjava.core.command.BuildImageResultCallback
 import com.github.dockerjava.core.command.PullImageResultCallback
 import com.github.dockerjava.core.command.WaitContainerResultCallback
-import org.dockercontainerobjects.util.Loggers.debug
-import org.dockercontainerobjects.util.Loggers.loggerFor
-import org.dockercontainerobjects.util.Loggers.warn
+import org.dockercontainerobjects.util.debug
+import org.dockercontainerobjects.util.loggerFor
+import org.dockercontainerobjects.util.warn
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream

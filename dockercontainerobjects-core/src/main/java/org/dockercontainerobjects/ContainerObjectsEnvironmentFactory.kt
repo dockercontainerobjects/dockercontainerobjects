@@ -3,7 +3,7 @@ package org.dockercontainerobjects
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientBuilder
-import org.dockercontainerobjects.util.Strings.toCapitalCase
+import org.dockercontainerobjects.util.toCapitalCase
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -22,14 +22,18 @@ object ContainerObjectsEnvironmentFactory {
     const val DEFAULTVALUE_DOCKERNETWORKPROXY_PORT_SOCKS = 1080
     const val DEFAULTVALUE_DOCKERNETWORKPROXY_PORT_HTTP = 8080
 
-    val PROPERTY_CONTAINERPROXY_TYPE_DIRECT = Proxy.Type.DIRECT.name.toLowerCase()
+    @JvmField
+    val PROPERTY_CONTAINERPROXY_TYPE_DIRECT = Proxy.Type.DIRECT.name.toUpperCase()
 
+    @JvmStatic
     fun newEnvironment(dockerClient: DockerClient, containerProxy: Proxy = createDockerNetworkProxy()) =
             ContainerObjectsEnvironment(dockerClient, containerProxy)
 
+    @JvmStatic
     fun newEnvironment(properties: Properties) =
         newEnvironment(createDockerClient(properties), createDockerNetworkProxy(properties))
 
+    @JvmStatic
     fun newEnvironment() =
         newEnvironment(DockerClientBuilder.getInstance().build(), createDockerNetworkProxy())
 
@@ -59,10 +63,10 @@ object ContainerObjectsEnvironmentFactory {
     }
 
     private fun createDockerNetworkProxy(properties: Properties = System.getProperties()): Proxy {
-        val proxyType = properties.entry(PROPERTY_DOCKERNETWORKPROXY_TYPE, ENV_DOCKERNETWORKPROXY_TYPE, PROPERTY_CONTAINERPROXY_TYPE_DIRECT)
+        val proxyType = properties.entry(PROPERTY_DOCKERNETWORKPROXY_TYPE, ENV_DOCKERNETWORKPROXY_TYPE, PROPERTY_CONTAINERPROXY_TYPE_DIRECT).toUpperCase()
         if (proxyType == PROPERTY_CONTAINERPROXY_TYPE_DIRECT)
             return Proxy.NO_PROXY
-        val type = Proxy.Type.valueOf(proxyType.toUpperCase())
+        val type = Proxy.Type.valueOf(proxyType)
         val host = InetAddress.getByName(properties.entry(PROPERTY_DOCKERNETWORKPROXY_HOSTNAME, ENV_DOCKERNETWORKPROXY_HOSTNAME))
         val portValue = properties.entry(PROPERTY_DOCKERNETWORKPROXY_PORT, ENV_DOCKERNETWORKPROXY_PORT)
         val port =

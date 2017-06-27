@@ -2,9 +2,9 @@ package org.dockercontainerobjects.extensions
 
 import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.annotations.ContainerId
-import org.dockercontainerobjects.util.AccessibleObjects.annotatedWith
-import org.dockercontainerobjects.util.Fields.ofType
-import org.dockercontainerobjects.util.Predicates.and
+import org.dockercontainerobjects.util.annotatedWith
+import org.dockercontainerobjects.util.ofType
+import org.dockercontainerobjects.util.and
 import java.lang.reflect.Field
 
 class ContainerIdInjectorExtension: BaseContainerObjectsExtension() {

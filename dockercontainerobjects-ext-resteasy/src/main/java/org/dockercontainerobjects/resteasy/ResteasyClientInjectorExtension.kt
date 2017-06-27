@@ -3,7 +3,7 @@ package org.dockercontainerobjects.resteasy
 import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.ContainerObjectsManager
 import org.dockercontainerobjects.extensions.BaseContainerObjectsExtension
-import org.dockercontainerobjects.util.Fields.ofOneType
+import org.dockercontainerobjects.util.ofOneType
 import org.jboss.resteasy.client.jaxrs.ResteasyClient
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder
 import java.lang.reflect.Field
