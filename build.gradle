@@ -8,7 +8,6 @@ buildscript {
         classpath "com.netflix.nebula:gradle-resolution-rules-plugin:${nebulaResolutionRulesPluginVersion}"
         classpath "com.netflix.nebula:nebula-project-plugin:${nebulaProjectPluginVersion}"
         classpath "com.netflix.nebula:nebula-release-plugin:${nebulaReleasePluginVersion}"
-        classpath "net.ltgt.gradle:gradle-errorprone-plugin:${errorPronePluginVersion}"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinPluginVersion}"
         classpath "org.junit.platform:junit-platform-gradle-plugin:${junitPlatformPluginVersion}"
     }
@@ -25,7 +24,6 @@ subprojects {
     apply plugin: 'kotlin'
     apply plugin: 'nebula.maven-apache-license'
     apply plugin: 'nebula.resolution-rules'
-    apply plugin: 'net.ltgt.errorprone'
     apply plugin: 'org.junit.platform.gradle.plugin'
 
     ext {
@@ -52,16 +50,17 @@ subprojects {
         }
     }
 
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
+    sourceCompatibility = rootProject.javaVersion
+    targetCompatibility = rootProject.javaVersion
 
     repositories {
         jcenter()
     }
 
-    compileKotlin {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         kotlinOptions {
-            jvmTarget = javaVersion
+            javaParameters = true
+            jvmTarget = rootProject.javaVersion
         }
     }
 
@@ -98,7 +97,7 @@ subprojects {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '3.4.1'
+    gradleVersion = '4.0'
 }
 
 task clean(type: Delete) {
