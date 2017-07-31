@@ -146,11 +146,11 @@ annotation class RegistryImage(val value: String = "", val forcePull: Boolean = 
 @Retention(RUNTIME)
 @Target(CLASS, FUNCTION)
 @Inherited
-annotation class BuildImage(val value: String = "", val tag: String = "", val forcePull:Boolean = false)
+annotation class BuildImage(val value: String = "", val tag: String = "", val forcePull: Boolean = false)
 
 @MustBeDocumented
 @Retention(RUNTIME)
-@Target(FIELD, FUNCTION)
+@Target(CLASS, FUNCTION)
 @Inherited
 annotation class Environment(vararg val value: EnvironmentEntry = arrayOf())
 
