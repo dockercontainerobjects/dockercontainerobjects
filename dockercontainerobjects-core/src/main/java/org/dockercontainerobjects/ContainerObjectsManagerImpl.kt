@@ -59,6 +59,8 @@ import org.dockercontainerobjects.util.call
 import org.dockercontainerobjects.util.debug
 import org.dockercontainerobjects.util.expectingNoParameters
 import org.dockercontainerobjects.util.findMethods
+import org.dockercontainerobjects.util.getAnnotation
+import org.dockercontainerobjects.util.getAnnotationsByType
 import org.dockercontainerobjects.util.instantiate
 import org.dockercontainerobjects.util.invokeInstanceMethods
 import org.dockercontainerobjects.util.isOfReturnType
@@ -108,11 +110,11 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             containerInstance.invokeContainerLifecycleListeners<BeforePreparingImage>()
             l.debug { "preparing image for container class '${containerType.simpleName}'" }
             // check for image from annotation or method
-            val registryImageAnnotation = containerType.getAnnotation(RegistryImage::class.java)
+            val registryImageAnnotation = containerType.getAnnotation<RegistryImage>()
             val registryImageMethods = containerType.findMethods(expectingNoParameters() and annotatedWith<Method>(RegistryImage::class))
                     .stream()
                     .collect(Collectors.toList())
-            val buildImageAnnotation = containerType.getAnnotation(BuildImage::class.java)
+            val buildImageAnnotation = containerType.getAnnotation<BuildImage>()
             val buildImageMethods = containerType.findMethods(expectingNoParameters() and annotatedWith<Method>(BuildImage::class))
                     .stream()
                     .collect(Collectors.toList())
@@ -141,7 +143,7 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
                 if (!registryImageMethod.isOfReturnType<String>())
                     throw IllegalArgumentException(
                             "Method '$registryImageMethod' on class '${containerType.simpleName}' must return '${String::class.java.simpleName}' to be used to define the image to use")
-                val registryImageAnnotationValue = registryImageMethod.getAnnotation(RegistryImage::class.java)
+                val registryImageAnnotationValue = registryImageMethod.getAnnotation<RegistryImage>()!!
                 imageId = registryImageAnnotationValue.value
                 if (!imageId.isNullOrEmpty())
                     throw IllegalArgumentException(
@@ -179,7 +181,7 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
                 if (imageTag.contains(IMAGE_TAG_DYNAMIC_PLACEHOLDER))
                     imageTag = imageTag.replace(IMAGE_TAG_DYNAMIC_PLACEHOLDER, UUID.randomUUID().toString())
                 val content = mutableMapOf<String, Any>()
-                containerType.getAnnotationsByType(BuildImageContentEntry::class.java).stream().forEach {
+                containerType.getAnnotationsByType<BuildImageContentEntry>().stream().forEach {
                     l.debug { "Adding entry name '${it.name}' with content '${it.value}'" }
                     content.put(it.name, it.value.normalize(containerType))
                 }
@@ -246,7 +248,7 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             val environment = mutableListOf<String>()
             // check for environment defined as class annotations
             environment.addAll(
-                    containerType.getAnnotationsByType(EnvironmentEntry::class.java)
+                    containerType.getAnnotationsByType<EnvironmentEntry>()
                             .stream()
                             .map { if (it.name.isNullOrEmpty()) it.value else it.name+"="+it.value }
                             .collect(toList()))

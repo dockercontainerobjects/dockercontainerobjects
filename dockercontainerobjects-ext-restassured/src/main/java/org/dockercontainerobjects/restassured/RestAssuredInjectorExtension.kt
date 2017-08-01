@@ -7,6 +7,7 @@ import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.ContainerObjectsManager
 import org.dockercontainerobjects.docker.DockerClientExtensions.inetAddress
 import org.dockercontainerobjects.extensions.BaseContainerObjectsExtension
+import org.dockercontainerobjects.util.getAnnotation
 import org.dockercontainerobjects.util.ofType
 import java.lang.reflect.Field
 import java.net.InetSocketAddress
@@ -29,7 +30,7 @@ class RestAssuredInjectorExtension: BaseContainerObjectsExtension() {
 
     override fun <T: Any> getFieldValueOnContainerStarted(ctx: ContainerObjectContext<T>, field: Field): Any {
         val spec = RestAssured.given()
-        val config = field.getAnnotation(RestAssuredSpecConfig::class.java)
+        val config = field.getAnnotation<RestAssuredSpecConfig>()
         if (config !== null) {
             val hostAddress = ctx.networkSettings?.inetAddress()?.hostAddress ?: throw IllegalStateException()
             if (config.baseUri != DEFAULT_BASE_URI)

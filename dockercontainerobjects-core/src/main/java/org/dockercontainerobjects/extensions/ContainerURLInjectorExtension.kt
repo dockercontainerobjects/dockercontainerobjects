@@ -2,9 +2,10 @@ package org.dockercontainerobjects.extensions
 
 import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.docker.DockerClientExtensions.inetAddress
-import org.dockercontainerobjects.util.annotatedWith
-import org.dockercontainerobjects.util.ofType
 import org.dockercontainerobjects.util.and
+import org.dockercontainerobjects.util.annotatedWith
+import org.dockercontainerobjects.util.getAnnotation
+import org.dockercontainerobjects.util.ofType
 import java.lang.reflect.Field
 import java.net.URL
 
@@ -20,7 +21,7 @@ class ContainerURLInjectorExtension: BaseContainerObjectsExtension() {
     override fun <T: Any> getFieldSelectorOnContainerStopped(ctx: ContainerObjectContext<T>) = FIELD_SELECTOR
 
     override fun <T: Any> getFieldValueOnContainerStarted(ctx: ContainerObjectContext<T>, field: Field): URL {
-        val config = field.getAnnotation(URLConfig::class.java)
+        val config = field.getAnnotation<URLConfig>()!!
         val addr: String = ctx.networkSettings?.inetAddress()?.hostAddress ?: throw IllegalStateException()
         return if (config.value.isNotEmpty())
             URL(config.value.replace(HOST_DYNAMIC_PLACEHOLDER, addr))

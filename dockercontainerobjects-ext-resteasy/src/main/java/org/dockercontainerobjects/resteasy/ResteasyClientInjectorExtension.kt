@@ -3,6 +3,7 @@ package org.dockercontainerobjects.resteasy
 import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.ContainerObjectsManager
 import org.dockercontainerobjects.extensions.BaseContainerObjectsExtension
+import org.dockercontainerobjects.util.getAnnotation
 import org.dockercontainerobjects.util.ofOneType
 import org.jboss.resteasy.client.jaxrs.ResteasyClient
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder
@@ -26,7 +27,7 @@ class ResteasyClientInjectorExtension: BaseContainerObjectsExtension() {
 
     override fun <T: Any> getFieldValueOnContainerStarted(ctx: ContainerObjectContext<T>, field: Field): Any {
         val builder = ResteasyClientBuilder()
-        val config = field.getAnnotation(ResteasyClientConfig::class.java)
+        val config = field.getAnnotation<ResteasyClientConfig>()
         if (config !== null)
             builder
                 .hostnameVerification(config.policy)
