@@ -5,11 +5,11 @@
 
 dependencies {
     api project(':dockercontainerobjects-core')
-    api "junit:junit:${project.junitClassicVersion}"
+    api "junit:junit:${rootProject.junitClassicVersion}"
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${project.kotlinVersion}"
-    implementation "org.slf4j:slf4j-api:${project.slf4jVersion}"// [1]
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${rootProject.kotlinVersion}"
+    implementation "org.slf4j:slf4j-api:${rootProject.slf4jVersion}"// [1]
 
-    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${project.junitVintageVersion}"
-    testRuntimeOnly "ch.qos.logback:logback-classic:${project.logbackVersion}" // [1]
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${rootProject.junitVintageVersion}"
+    testRuntimeOnly "ch.qos.logback:logback-classic:${rootProject.logbackVersion}" // [1]
 }

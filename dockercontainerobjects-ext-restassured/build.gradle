@@ -6,11 +6,11 @@
 dependencies {
     api project(':dockercontainerobjects-core')
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${project.kotlinVersion}"
-    implementation "io.rest-assured:rest-assured:${restassuredVersion}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${rootProject.kotlinVersion}"
+    implementation "io.rest-assured:rest-assured:${rootProject.restassuredVersion}"
 
-    testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitJupiterVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitJupiterVersion}"
 
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitJupiterVersion}"
-    testRuntimeOnly "ch.qos.logback:logback-classic:${project.logbackVersion}" // [1]
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitJupiterVersion}"
+    testRuntimeOnly "ch.qos.logback:logback-classic:${rootProject.logbackVersion}" // [1]
 }
