@@ -1,11 +1,13 @@
 package org.dockercontainerobjects.docker
 
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.command.CreateContainerResponse
 import com.github.dockerjava.api.command.InspectContainerResponse
 import com.github.dockerjava.api.command.InspectImageResponse
 import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.exception.NotModifiedException
+import com.github.dockerjava.api.model.Frame
 import com.github.dockerjava.api.model.NetworkSettings
 import com.github.dockerjava.core.command.BuildImageResultCallback
 import com.github.dockerjava.core.command.PullImageResultCallback
@@ -119,6 +121,17 @@ object DockerClientExtensions {
         val response = inspectContainerCmd(containerId).exec()
         l.debug { "Docker container with id '$containerId' is in state '${response.state}'" }
         return response
+    }
+
+    @JvmStatic
+    fun <T: ResultCallback<Frame>> DockerClient.fetchContainerLogs(containerId: String, includeStdOut: Boolean, includeStdErr: Boolean, callback: T) {
+        logContainerCmd(containerId)
+                .withStdOut(includeStdOut)
+                .withStdErr(includeStdErr)
+                .withSince(0)
+                .withFollowStream(true)
+                .withTailAll()
+                .exec(callback)
     }
 
     @Throws(NotFoundException::class, NotModifiedException::class)

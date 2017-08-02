@@ -41,9 +41,11 @@ import org.dockercontainerobjects.annotations.BuildImageContent
 import org.dockercontainerobjects.annotations.BuildImageContentEntry
 import org.dockercontainerobjects.annotations.Environment
 import org.dockercontainerobjects.annotations.EnvironmentEntry
+import org.dockercontainerobjects.annotations.OnLogEntry
 import org.dockercontainerobjects.annotations.RegistryImage
 import org.dockercontainerobjects.docker.DockerClientExtensions.buildImage
 import org.dockercontainerobjects.docker.DockerClientExtensions.createContainer
+import org.dockercontainerobjects.docker.DockerClientExtensions.fetchContainerLogs
 import org.dockercontainerobjects.docker.DockerClientExtensions.inetAddressOfType
 import org.dockercontainerobjects.docker.DockerClientExtensions.inspectContainer
 import org.dockercontainerobjects.docker.DockerClientExtensions.inspectImage
@@ -52,12 +54,14 @@ import org.dockercontainerobjects.docker.DockerClientExtensions.removeContainer
 import org.dockercontainerobjects.docker.DockerClientExtensions.removeImage
 import org.dockercontainerobjects.docker.DockerClientExtensions.startContainer
 import org.dockercontainerobjects.docker.DockerClientExtensions.stopContainer
+import org.dockercontainerobjects.docker.MethodCallerLogResultCallback
 import org.dockercontainerobjects.util.and
 import org.dockercontainerobjects.util.annotatedWith
 import org.dockercontainerobjects.util.buildTARGZ
 import org.dockercontainerobjects.util.call
 import org.dockercontainerobjects.util.debug
 import org.dockercontainerobjects.util.expectingNoParameters
+import org.dockercontainerobjects.util.expectingParameterCount
 import org.dockercontainerobjects.util.findMethods
 import org.dockercontainerobjects.util.getAnnotation
 import org.dockercontainerobjects.util.getAnnotationsByType
@@ -281,6 +285,7 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             networkSettings = response.networkSettings
             stage = CONTAINER_STARTED
             containerInstance.invokeContainerLifecycleListeners<AfterContainerStarted>()
+            registerContainerLogReceivers()
         }
 
         private fun <T: Any> ContainerObjectContextImpl<T>.stopContainer() {
@@ -343,6 +348,28 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
 
             environment.enhancer.teardownInstance(containerInstance)
             stage = INSTANCE_DISCARDED
+        }
+
+        private fun <T: Any> ContainerObjectContextImpl<T>.registerContainerLogReceivers() {
+            val containerInstance = instance ?: throw IllegalStateException()
+            val currContainerId = containerId ?: throw IllegalStateException()
+
+            val type = containerInstance.javaClass
+            type.findMethods(onInstance<Method>() and expectingParameterCount(1) and annotatedWith<Method>(OnLogEntry::class))
+                    .forEach { method ->
+                        val logEntryAnotation = method.getAnnotation<OnLogEntry>()!!
+                        val paramType: Class<*> = method.parameterTypes[0]
+                        val callback =
+                                when (paramType.kotlin) {
+                                    LogEntryContext::class -> MethodCallerLogResultCallback.LogEntryContextArgumentMethodCallback(this, method)
+                                    String::class -> MethodCallerLogResultCallback.StringArgumentMethodCallback(this, method)
+                                    ByteArray::class -> MethodCallerLogResultCallback.ByteArrayArgumentMethodCallback(this, method)
+                                    else -> null
+                                }
+                        if (callback !== null)
+                            environment.dockerClient.fetchContainerLogs(
+                                    currContainerId, logEntryAnotation.includeStdOut, logEntryAnotation.includeStdErr, callback)
+                    }
         }
 
         private fun Any.invokeContainerLifecycleListeners(annotationType: Class<out Annotation>) {

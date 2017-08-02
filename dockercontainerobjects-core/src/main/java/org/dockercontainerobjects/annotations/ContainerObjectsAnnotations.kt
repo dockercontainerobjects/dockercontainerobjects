@@ -173,3 +173,9 @@ annotation class BuildImageContent(vararg val value: BuildImageContentEntry = ar
 @Inherited
 @Repeatable(BuildImageContent::class)
 annotation class BuildImageContentEntry(val name: String = "", val value: String = "")
+
+@MustBeDocumented
+@Retention(RUNTIME)
+@Target(FUNCTION)
+@Inherited
+annotation class OnLogEntry(val includeStdOut: Boolean = true, val includeStdErr: Boolean = true)
