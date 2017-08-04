@@ -198,6 +198,7 @@ The lifecycle goes in this order:
   - 3\.2\. Image to build: if a method is annotated with `@BuildImage`, it will be called in the middle of the image build (see 1.1)
   - 3\.3\. Content for image to build: if a method is annotated with `@BuildImageContent`, it will be called in the middle of the image build (see 1.1) and after the selecting the dockerfile (see 3.2)
   - 3\.4\. Environment preparation: if a method is annotated with `@Environment`, it will be called in the middle of the container creation (see 1.2)
+  - 3\.5\. Logs: if a method is annotated with `@OnLogEntry`, it will be called whenever the container produces a log message. Method must expect one parameter. Possible types are `String`, `byte[]` or `LogEntryContext`. `LogEntryContext` allows reading the entry but also requesting to stop receiving new log entries.
 
 ## Container configuration
 
@@ -295,7 +296,7 @@ If using `docker-machine`, a SOCKS proxy is the easiest solution.
 Simply execute the `ssh` command in the following way:
 
 ```bash
-$ docker-machine ssh ${MACHINE NAME} -D1080
+$ docker-machine ssh MACHINE_NAME -D1080
 ```
 
 This will open a connection from your local host to the docker VM and opens a SOCKS proxy on port `1080`.
