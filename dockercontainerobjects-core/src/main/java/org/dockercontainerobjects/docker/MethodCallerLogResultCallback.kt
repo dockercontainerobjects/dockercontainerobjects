@@ -5,7 +5,6 @@ import com.github.dockerjava.api.model.StreamType.STDERR
 import com.github.dockerjava.api.model.StreamType.STDOUT
 import com.github.dockerjava.core.async.ResultCallbackTemplate
 import org.dockercontainerobjects.ContainerObjectContext
-import org.dockercontainerobjects.ContainerObjectLifecyclePhase.CONTAINER_OBJECT_DESTRUCTION
 import org.dockercontainerobjects.LogEntryContext
 import org.dockercontainerobjects.util.call
 import java.lang.reflect.Method
@@ -14,12 +13,9 @@ sealed class MethodCallerLogResultCallback<T: Any>(val context: ContainerObjectC
         ResultCallbackTemplate<MethodCallerLogResultCallback<T>, Frame>() {
 
     override fun onNext(frame: Frame) {
-        if (context.phase != CONTAINER_OBJECT_DESTRUCTION) {
-            val argument = onGenerateCallbackArgument(frame)
-            method.call(context.instance, argument)
-            onPostProcessCallbackArgument(frame, argument)
-        } else
-            close()
+        val argument = onGenerateCallbackArgument(frame)
+        method.call(context.instance, argument)
+        onPostProcessCallbackArgument(frame, argument)
     }
 
     protected abstract fun onGenerateCallbackArgument(frame: Frame): T
