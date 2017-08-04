@@ -178,4 +178,4 @@ annotation class BuildImageContentEntry(val name: String = "", val value: String
 @Retention(RUNTIME)
 @Target(FUNCTION)
 @Inherited
-annotation class OnLogEntry(val includeStdOut: Boolean = true, val includeStdErr: Boolean = true)
+annotation class OnLogEntry(val includeStdOut: Boolean = true, val includeStdErr: Boolean = true, val includeTimestamps: Boolean = false)

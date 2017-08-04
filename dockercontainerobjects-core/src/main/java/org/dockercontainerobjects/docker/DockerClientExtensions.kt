@@ -24,6 +24,9 @@ import java.net.InetAddress
 import java.net.UnknownHostException
 import java.security.AccessController
 import java.security.PrivilegedAction
+import java.time.Duration
+import java.time.Instant
+import java.time.temporal.Temporal
 import kotlin.reflect.KClass
 
 object DockerClientExtensions {
@@ -124,11 +127,14 @@ object DockerClientExtensions {
     }
 
     @JvmStatic
-    fun <T: ResultCallback<Frame>> DockerClient.fetchContainerLogs(containerId: String, includeStdOut: Boolean, includeStdErr: Boolean, callback: T) {
+    fun <T: ResultCallback<Frame>> DockerClient.fetchContainerLogs(
+            containerId: String, since: Temporal = Instant.EPOCH,
+            includeStdOut: Boolean = true, includeStdErr: Boolean = true, includeTimestamps: Boolean = false, callback: T) {
         logContainerCmd(containerId)
                 .withStdOut(includeStdOut)
                 .withStdErr(includeStdErr)
-                .withSince(0)
+                .withSince(Duration.between(Instant.EPOCH, since).seconds.toInt())
+                .withTimestamps(includeTimestamps)
                 .withFollowStream(true)
                 .withTailAll()
                 .exec(callback)

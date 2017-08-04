@@ -80,6 +80,8 @@ import java.lang.reflect.Method
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL
+import java.time.Instant
+import java.time.temporal.Temporal
 import java.util.UUID
 import java.util.stream.Collectors
 import java.util.stream.Collectors.toList
@@ -280,12 +282,13 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             val currContainerId = containerId ?: throw IllegalStateException()
 
             containerInstance.invokeContainerLifecycleListeners<BeforeStartingContainer>()
+            val start = Instant.now()
             val response = environment.dockerClient.startContainer(currContainerId)
 
             networkSettings = response.networkSettings
             stage = CONTAINER_STARTED
             containerInstance.invokeContainerLifecycleListeners<AfterContainerStarted>()
-            registerContainerLogReceivers()
+            registerContainerLogReceivers(start)
         }
 
         private fun <T: Any> ContainerObjectContextImpl<T>.stopContainer() {
@@ -350,7 +353,7 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             stage = INSTANCE_DISCARDED
         }
 
-        private fun <T: Any> ContainerObjectContextImpl<T>.registerContainerLogReceivers() {
+        private fun <T: Any> ContainerObjectContextImpl<T>.registerContainerLogReceivers(since: Temporal) {
             val containerInstance = instance ?: throw IllegalStateException()
             val currContainerId = containerId ?: throw IllegalStateException()
 
@@ -368,7 +371,9 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
                                 }
                         if (callback !== null)
                             environment.dockerClient.fetchContainerLogs(
-                                    currContainerId, logEntryAnotation.includeStdOut, logEntryAnotation.includeStdErr, callback)
+                                    currContainerId, since,
+                                    logEntryAnotation.includeStdOut, logEntryAnotation.includeStdErr, logEntryAnotation.includeTimestamps,
+                                    callback)
                     }
         }
 

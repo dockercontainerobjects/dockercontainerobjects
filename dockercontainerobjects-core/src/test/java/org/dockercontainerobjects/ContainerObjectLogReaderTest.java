@@ -2,9 +2,17 @@ package org.dockercontainerobjects;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.text.ParsePosition;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.Temporal;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
+import org.dockercontainerobjects.annotations.AfterContainerStopped;
+import org.dockercontainerobjects.annotations.BeforeStartingContainer;
 import org.dockercontainerobjects.annotations.OnLogEntry;
 import org.dockercontainerobjects.annotations.RegistryImage;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +43,22 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
         try (ContainerObjectReference<LogWithStringTomcatContainer> ref = ContainerObjectReference.newReference(env, LogWithStringTomcatContainer.class)) {
             ref.getInstance().await(TIMEOUT_MILLIS);
         } catch (IllegalStateException ex) {
+            fail(ex);
+        }
+    }
+
+    @Test
+    @DisplayName("It is possible to read container log after container is restarted")
+    @Tag("ISSUE-19")
+    void readLogAfterRestart() {
+        try (ContainerObjectReference<RestartableTomcatContainer> ref = ContainerObjectReference.newReference(env, RestartableTomcatContainer.class)) {
+            // measure how long does tomcat takes to start
+            ref.getInstance().await(TIMEOUT_MILLIS);
+            ref.restart();
+            ref.getInstance().await(TIMEOUT_MILLIS);
+            ref.restart();
+            ref.getInstance().await(TIMEOUT_MILLIS);
+        } catch (RuntimeException ex) {
             fail(ex);
         }
     }
@@ -77,6 +101,63 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
             try {
                 if (!latch.await(timeoutMillis, TimeUnit.MILLISECONDS))
                     throw new IllegalStateException();
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    }
+
+    @RegistryImage("tomcat:jre8")
+    public static class RestartableTomcatContainer {
+
+        private volatile CountDownLatch latch;
+        private volatile Temporal startTime;
+        private volatile RuntimeException exception;
+
+        @BeforeStartingContainer
+        void onStart() {
+            startTime = Instant.now();
+            latch = new CountDownLatch(1);
+            exception = new RuntimeException("log entry never called");
+        }
+
+        @AfterContainerStopped
+        void onStop() {
+            startTime = null;
+            latch = null;
+        }
+
+        @OnLogEntry(includeTimestamps = true)
+        void onLogEntry(LogEntryContext ctx) {
+            exception = null;
+            try {
+                String line = ctx.getEntryText().trim();
+                ParsePosition position = new ParsePosition(0);
+                Instant timestamp = Instant.from(DateTimeFormatter.ISO_INSTANT.parse(line, position));
+                line = line.substring(position.getIndex());
+
+                if (Duration.between(startTime, timestamp).isNegative())
+                    throw new RuntimeException("Started at "+startTime+" but received message with timestamp "+timestamp+" and content: "+line);
+                if (SERVER_STARTED_PATTERN.matcher(line).find()) {
+                    latch.countDown();
+                    ctx.stop();
+                }
+            } catch (RuntimeException ex) {
+                exception = ex;
+                ctx.stop();
+                return;
+            }
+        }
+
+        public void await(long timeoutMillis) {
+            try {
+                if (latch == null)
+                    throw new RuntimeException(new NullPointerException());
+                boolean completed = latch.await(timeoutMillis, TimeUnit.MILLISECONDS);
+                if (exception != null)
+                    throw exception;
+                if (!completed)
+                    throw new RuntimeException(new TimeoutException());
             } catch (InterruptedException e) {
                 throw new IllegalStateException(e);
             }
