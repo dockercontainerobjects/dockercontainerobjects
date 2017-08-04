@@ -25,7 +25,7 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
 
     public static final String SERVER_STARTED_TEMPLATE = "Server startup in \\d+ ms";
     public static final Pattern SERVER_STARTED_PATTERN = Pattern.compile(SERVER_STARTED_TEMPLATE);
-    public static final long TIMEOUT_MILLIS = 5000L;
+    public static final long TIMEOUT_MILLIS = 10000L;
 
     @Test
     @DisplayName("It is possible to read container log receiving LogEntryContext instances")
@@ -52,9 +52,6 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
     @Tag("ISSUE-19")
     void readLogAfterRestart() {
         try (ContainerObjectReference<RestartableTomcatContainer> ref = ContainerObjectReference.newReference(env, RestartableTomcatContainer.class)) {
-            // measure how long does tomcat takes to start
-            ref.getInstance().await(TIMEOUT_MILLIS);
-            ref.restart();
             ref.getInstance().await(TIMEOUT_MILLIS);
             ref.restart();
             ref.getInstance().await(TIMEOUT_MILLIS);
