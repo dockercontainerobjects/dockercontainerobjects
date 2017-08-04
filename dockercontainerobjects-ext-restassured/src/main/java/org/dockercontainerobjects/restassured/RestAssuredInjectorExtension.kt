@@ -5,7 +5,7 @@ import io.restassured.specification.ProxySpecification
 import io.restassured.specification.RequestSpecification
 import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.ContainerObjectsManager
-import org.dockercontainerobjects.docker.DockerClientExtensions.inetAddress
+import org.dockercontainerobjects.docker.inetAddress
 import org.dockercontainerobjects.extensions.BaseContainerObjectsExtension
 import org.dockercontainerobjects.util.getAnnotation
 import org.dockercontainerobjects.util.ofType

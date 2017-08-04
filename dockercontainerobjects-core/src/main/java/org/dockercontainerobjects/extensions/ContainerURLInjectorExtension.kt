@@ -1,7 +1,7 @@
 package org.dockercontainerobjects.extensions
 
 import org.dockercontainerobjects.ContainerObjectContext
-import org.dockercontainerobjects.docker.DockerClientExtensions.inetAddress
+import org.dockercontainerobjects.docker.inetAddress
 import org.dockercontainerobjects.util.and
 import org.dockercontainerobjects.util.annotatedWith
 import org.dockercontainerobjects.util.getAnnotation

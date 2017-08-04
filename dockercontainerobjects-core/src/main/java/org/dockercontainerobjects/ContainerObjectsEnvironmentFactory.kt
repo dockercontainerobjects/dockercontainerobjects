@@ -37,6 +37,7 @@ object ContainerObjectsEnvironmentFactory {
     fun newEnvironment() =
         newEnvironment(DockerClientBuilder.getInstance().build(), createDockerNetworkProxy())
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun createDockerClient(properties: Properties) =
         DockerClientBuilder
                 .getInstance(createDockerClientConfig(properties))
@@ -79,6 +80,7 @@ object ContainerObjectsEnvironmentFactory {
         return Proxy(type, InetSocketAddress(host, port))
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun Properties.entry(propName: String, fallbackEnvName: String, fallbackValue: String = "") =
         getProperty(propName) ?: getProperty(fallbackEnvName) ?: System.getenv(fallbackEnvName) ?: fallbackValue
 }

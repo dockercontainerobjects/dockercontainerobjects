@@ -43,17 +43,17 @@ import org.dockercontainerobjects.annotations.Environment
 import org.dockercontainerobjects.annotations.EnvironmentEntry
 import org.dockercontainerobjects.annotations.OnLogEntry
 import org.dockercontainerobjects.annotations.RegistryImage
-import org.dockercontainerobjects.docker.DockerClientExtensions.buildImage
-import org.dockercontainerobjects.docker.DockerClientExtensions.createContainer
-import org.dockercontainerobjects.docker.DockerClientExtensions.fetchContainerLogs
-import org.dockercontainerobjects.docker.DockerClientExtensions.inetAddressOfType
-import org.dockercontainerobjects.docker.DockerClientExtensions.inspectContainer
-import org.dockercontainerobjects.docker.DockerClientExtensions.inspectImage
-import org.dockercontainerobjects.docker.DockerClientExtensions.pullImage
-import org.dockercontainerobjects.docker.DockerClientExtensions.removeContainer
-import org.dockercontainerobjects.docker.DockerClientExtensions.removeImage
-import org.dockercontainerobjects.docker.DockerClientExtensions.startContainer
-import org.dockercontainerobjects.docker.DockerClientExtensions.stopContainer
+import org.dockercontainerobjects.docker.buildImage
+import org.dockercontainerobjects.docker.createContainer
+import org.dockercontainerobjects.docker.fetchContainerLogs
+import org.dockercontainerobjects.docker.inetAddressOfType
+import org.dockercontainerobjects.docker.inspectContainer
+import org.dockercontainerobjects.docker.inspectImage
+import org.dockercontainerobjects.docker.pullImage
+import org.dockercontainerobjects.docker.removeContainer
+import org.dockercontainerobjects.docker.removeImage
+import org.dockercontainerobjects.docker.startContainer
+import org.dockercontainerobjects.docker.stopContainer
 import org.dockercontainerobjects.docker.MethodCallerLogResultCallback
 import org.dockercontainerobjects.util.and
 import org.dockercontainerobjects.util.annotatedWith
@@ -132,9 +132,9 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             if (options != 1)
                 throw IllegalArgumentException(
                         "Container class '${containerType.simpleName}' has more than one way to define the image to use")
-            var imageId: String? = null
+            var imageId: String?
             var forcePull: Boolean = false
-            var autoRemove: Boolean = false
+            var autoRemove: Boolean
             var imageBuilt: Boolean = false
 
             if (registryImageAnnotation !== null) {
