@@ -6,7 +6,6 @@ import java.text.ParsePosition;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.Temporal;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -25,7 +24,7 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
 
     public static final String SERVER_STARTED_TEMPLATE = "Server startup in \\d+ ms";
     public static final Pattern SERVER_STARTED_PATTERN = Pattern.compile(SERVER_STARTED_TEMPLATE);
-    public static final long TIMEOUT_MILLIS = 10000L;
+    public static final long TIMEOUT_MILLIS = 30000L;
 
     @Test
     @DisplayName("It is possible to read container log receiving LogEntryContext instances")
@@ -108,19 +107,17 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
     public static class RestartableTomcatContainer {
 
         private volatile CountDownLatch latch;
-        private volatile Temporal startTime;
+        private volatile Instant lastMessage;
         private volatile RuntimeException exception;
 
         @BeforeStartingContainer
         void onStart() {
-            startTime = Instant.now();
             latch = new CountDownLatch(1);
             exception = new RuntimeException("log entry never called");
         }
 
         @AfterContainerStopped
         void onStop() {
-            startTime = null;
             latch = null;
         }
 
@@ -128,13 +125,15 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
         void onLogEntry(LogEntryContext ctx) {
             exception = null;
             try {
-                String line = ctx.getEntryText().trim();
+                String line = ctx.getEntryText();
                 ParsePosition position = new ParsePosition(0);
                 Instant timestamp = Instant.from(DateTimeFormatter.ISO_INSTANT.parse(line, position));
-                line = line.substring(position.getIndex());
+                line = line.substring(position.getIndex()).trim();
 
-                if (Duration.between(startTime, timestamp).isNegative())
-                    throw new RuntimeException("Started at "+startTime+" but received message with timestamp "+timestamp+" and content: "+line);
+                if (lastMessage != null && lastMessage.minus(Duration.ofMillis(200)) .isAfter(timestamp))
+                    throw new RuntimeException("Last message received at "+lastMessage+", but new message received with timestamp "+timestamp+" and content: "+line);
+
+                lastMessage = timestamp;
                 if (SERVER_STARTED_PATTERN.matcher(line).find()) {
                     latch.countDown();
                     ctx.stop();
@@ -142,7 +141,6 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
             } catch (RuntimeException ex) {
                 exception = ex;
                 ctx.stop();
-                return;
             }
         }
 
