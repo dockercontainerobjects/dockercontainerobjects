@@ -33,4 +33,8 @@ class ContainerObjectReference<T: Any>(val manager: ContainerObjectsManager, val
     override fun close() {
         manager.destroy(instance)
     }
+
+    fun restart() {
+        manager.restart(instance)
+    }
 }
