@@ -18,7 +18,7 @@ public abstract class ContainerObjectManagerBasedTest {
 
     @BeforeAll
     static void createManager() {
-        env = ContainerObjectsEnvironmentFactory.INSTANCE.newEnvironment();
+        env = ContainerObjectsEnvironmentFactory.newEnvironment();
         manager = env.getManager();
     }
 
