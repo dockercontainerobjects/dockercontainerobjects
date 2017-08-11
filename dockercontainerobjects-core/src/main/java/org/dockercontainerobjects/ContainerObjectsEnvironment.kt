@@ -6,18 +6,32 @@ import java.net.Proxy
 import java.net.URL
 import java.net.URLConnection
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 
-class ContainerObjectsEnvironment(val dockerClient: DockerClient, val dockerNetworkProxy: Proxy): AutoCloseable {
+class ContainerObjectsEnvironment(
+        val dockerClient: DockerClient,
+        val dockerNetworkProxy: Proxy,
+        private val executorService: ScheduledExecutorService?): AutoCloseable {
 
     val manager: ContainerObjectsManager = ContainerObjectsManagerImpl(this)
 
     val enhancer: ContainerObjectsClassEnhancer = ContainerObjectsClassEnhancerImpl(this)
+
+    val executor: ScheduledExecutorService by lazy {
+        if (executorService !== null)
+            executorService
+        else
+            Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors())
+    }
 
     private val containers: MutableMap<Any, ContainerObjectContext<*>> = ConcurrentHashMap()
 
     init {
         ExtensionManager.setupEnvironment(this)
     }
+
+    constructor(dockerClient: DockerClient, dockerNetworkProxy: Proxy): this(dockerClient, dockerNetworkProxy, null)
 
     @Throws(IOException::class)
     override fun close() {
