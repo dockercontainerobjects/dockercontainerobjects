@@ -14,6 +14,7 @@ import org.dockercontainerobjects.annotations.AfterContainerStopped;
 import org.dockercontainerobjects.annotations.BeforeStartingContainer;
 import org.dockercontainerobjects.annotations.OnLogEntry;
 import org.dockercontainerobjects.annotations.RegistryImage;
+import org.dockercontainerobjects.support.ContainerObjectReference;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

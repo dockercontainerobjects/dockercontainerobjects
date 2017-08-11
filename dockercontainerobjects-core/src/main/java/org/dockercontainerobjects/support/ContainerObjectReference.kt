@@ -1,5 +1,7 @@
-package org.dockercontainerobjects
+package org.dockercontainerobjects.support
 
+import org.dockercontainerobjects.ContainerObjectsEnvironment
+import org.dockercontainerobjects.ContainerObjectsManager
 import kotlin.reflect.KClass
 
 class ContainerObjectReference<T: Any>(val manager: ContainerObjectsManager, val instance: T): AutoCloseable {
