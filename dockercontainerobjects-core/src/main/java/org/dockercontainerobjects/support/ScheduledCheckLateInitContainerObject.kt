@@ -1,13 +1,11 @@
 package org.dockercontainerobjects.support
 
-import org.dockercontainerobjects.ContainerObjectsEnvironment
 import org.dockercontainerobjects.annotations.AfterContainerStarted
 import org.dockercontainerobjects.util.debug
 import org.dockercontainerobjects.util.loggerFor
 import java.time.Instant
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit.MILLISECONDS
-import javax.inject.Inject
 
 abstract class ScheduledCheckLateInitContainerObject: AbstractLateInitContainerObject() {
 
@@ -18,9 +16,6 @@ abstract class ScheduledCheckLateInitContainerObject: AbstractLateInitContainerO
     private lateinit var started: Instant
     private lateinit var checkfuture: ScheduledFuture<*>
     open protected val checkFrequencyMillis get() = 250 // 0.25 seconds
-
-    @Inject
-    protected lateinit var environment: ContainerObjectsEnvironment
 
     protected abstract fun isServerReady(): Boolean
 

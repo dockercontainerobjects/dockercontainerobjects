@@ -1,15 +1,20 @@
 package org.dockercontainerobjects.support
 
+import org.dockercontainerobjects.ContainerObjectsEnvironment
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeoutException
+import javax.inject.Inject
 
 abstract class AbstractLateInitContainerObject: LateInitContainerObject {
 
     private val readyCounter = CountDownLatch(1)
 
     open protected val maxTimeoutMillis get() = 1000*60*5 // 5 minutes
+
+    @Inject
+    protected lateinit var environment: ContainerObjectsEnvironment
 
     protected fun markAsReady() {
         readyCounter.countDown()
@@ -31,5 +36,6 @@ abstract class AbstractLateInitContainerObject: LateInitContainerObject {
         }
     }
 
-    override final fun whenReady() = CompletableFuture.runAsync(this::waitForReady)
+    override final fun whenReady(): CompletableFuture<Void> =
+            CompletableFuture.runAsync(Runnable { waitForReady() }, environment.executor)
 }
