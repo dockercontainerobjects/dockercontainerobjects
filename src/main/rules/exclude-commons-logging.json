@@ -1,0 +1,10 @@
+{
+  "exclude": [
+    {
+      "module": "commons-logging:commons-logging",
+      "reason": "allow library clients to pick the logging implementation",
+      "author": "Ramon Rivas <rivasdiaz@gmail.com>",
+      "date": "2017-08-12"
+    }
+  ]
+}
