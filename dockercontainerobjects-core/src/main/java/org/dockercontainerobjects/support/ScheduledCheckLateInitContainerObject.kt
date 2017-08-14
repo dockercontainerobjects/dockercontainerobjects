@@ -4,6 +4,7 @@ import org.dockercontainerobjects.annotations.AfterContainerStarted
 import org.dockercontainerobjects.util.debug
 import org.dockercontainerobjects.util.loggerFor
 import java.time.Instant
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
@@ -28,13 +29,17 @@ abstract class ScheduledCheckLateInitContainerObject: AbstractLateInitContainerO
 
     private fun scheduleCheck() {
         l.debug { "scheduling a check every $checkFrequencyMillis ms" }
-        checkfuture = environment.executor.scheduleWithFixedDelay(this::checkServerReady, 0, checkFrequencyMillis.toLong(), MILLISECONDS)
+        checkfuture = environment.executor.scheduleWithFixedDelay(
+                this::checkServerReady, 0, checkFrequencyMillis.toLong(), MILLISECONDS)
     }
 
     private fun cancelCheck(successful: Boolean) {
         l.debug { "canceling scheduled check. ready: $successful" }
         checkfuture.cancel(false)
-        if (successful) markAsReady()
+        if (successful)
+            CompletableFuture
+                    .runAsync(Runnable { onBeforeReady() }, environment.executor)
+                    .thenRun(this::markAsReady)
     }
 
     private fun isCheckExpired() =

@@ -36,6 +36,8 @@ abstract class AbstractLateInitContainerObject: LateInitContainerObject {
         }
     }
 
+    protected open fun onBeforeReady() {}
+
     override final fun whenReady(): CompletableFuture<Void> =
             CompletableFuture.runAsync(Runnable { waitForReady() }, environment.executor)
 }

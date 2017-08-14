@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.URL;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import org.dockercontainerobjects.ContainerObjectManagerBasedTest;
+import org.dockercontainerobjects.annotations.BeforeStartingContainer;
 import org.dockercontainerobjects.annotations.RegistryImage;
 import org.dockercontainerobjects.extensions.URLConfig;
 import org.junit.jupiter.api.DisplayName;
@@ -15,7 +17,6 @@ import org.junit.jupiter.api.Test;
 
 @DisplayName("extending LogBasedLateInitContainerObject tests")
 @Tag("docker")
-@Tag("new")
 public class HttpURLBasedLateInitContainerObjectTest extends ContainerObjectManagerBasedTest {
 
     @Test
@@ -23,6 +24,7 @@ public class HttpURLBasedLateInitContainerObjectTest extends ContainerObjectMana
     void simpleContainer() {
         try (ContainerObjectReference<SimpleContainer> ref = ContainerObjectReference.newReference(env, SimpleContainer.class)) {
             ref.getInstance().waitForReady();
+            assertTrue(ref.getInstance().beforeReadyCalled.get());
         }
     }
 
@@ -52,6 +54,18 @@ public class HttpURLBasedLateInitContainerObjectTest extends ContainerObjectMana
         @Override
         protected URL getServerReadyURL() {
             return serverUrl;
+        }
+
+        static AtomicBoolean beforeReadyCalled = null;
+
+        @BeforeStartingContainer
+        protected void onBeforeStart() {
+            beforeReadyCalled = new AtomicBoolean(false);
+        }
+
+        @Override
+        protected void onBeforeReady() {
+            beforeReadyCalled.set(true);
         }
     }
 

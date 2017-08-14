@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import org.dockercontainerobjects.ContainerObjectManagerBasedTest;
+import org.dockercontainerobjects.annotations.BeforeStartingContainer;
 import org.dockercontainerobjects.annotations.RegistryImage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -13,7 +15,6 @@ import org.junit.jupiter.api.Test;
 
 @DisplayName("extending LogBasedLateInitContainerObject tests")
 @Tag("docker")
-@Tag("new")
 public class LogBasedLateInitContainerObjectTest extends ContainerObjectManagerBasedTest {
 
     @Test
@@ -21,6 +22,7 @@ public class LogBasedLateInitContainerObjectTest extends ContainerObjectManagerB
     void simpleContainer() {
         try (ContainerObjectReference<SimpleContainer> ref = ContainerObjectReference.newReference(env, SimpleContainer.class)) {
             ref.getInstance().waitForReady();
+            assertTrue(ref.getInstance().beforeReadyCalled.get());
         }
     }
 
@@ -49,6 +51,18 @@ public class LogBasedLateInitContainerObjectTest extends ContainerObjectManagerB
         @Override
         protected Pattern getServerReadyLogEntry() {
             return SERVER_STARTED_PATTERN;
+        }
+
+        static AtomicBoolean beforeReadyCalled = null;
+
+        @BeforeStartingContainer
+        protected void onBeforeStart() {
+            beforeReadyCalled = new AtomicBoolean(false);
+        }
+
+        @Override
+        protected void onBeforeReady() {
+            beforeReadyCalled.set(true);
         }
     }
 
