@@ -1,0 +1,19 @@
+{
+  "substitute": [
+    {
+      "module": "com.fasterxml.jackson.core:jackson-core:(,2.9.0)",
+      "with": "com.fasterxml.jackson.core:jackson-core:2.9.0",
+      "reason": "use latest version of Jackson libraries",
+      "author": "Ramon Rivas <rivasdiaz@gmail.com>",
+      "date": "2017-08-23"
+    }
+  ],
+  "align": [
+    {
+      "group": "com.fasterxml.jackson.*",
+      "reason": "use latest version of Jackson libraries",
+      "author": "Ramon Rivas <rivasdiaz@gmail.com>",
+      "date": "2017-08-23"
+    }
+  ]
+}

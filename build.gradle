@@ -66,6 +66,8 @@ subprojects {
 
     dependencies {
         resolutionRules files("${rootProject.projectDir}/src/main/rules/exclude-log4j.json")
+        resolutionRules files("${rootProject.projectDir}/src/main/rules/exclude-commons-logging.json")
+        resolutionRules files("${rootProject.projectDir}/src/main/rules/upgrade-jackson.json")
     }
 
     nebulaRelease {
@@ -97,7 +99,7 @@ subprojects {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '4.0.2'
+    gradleVersion = '4.1'
 }
 
 task clean(type: Delete) {
