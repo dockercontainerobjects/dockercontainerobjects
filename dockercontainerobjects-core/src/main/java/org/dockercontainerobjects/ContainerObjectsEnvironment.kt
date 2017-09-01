@@ -1,6 +1,8 @@
 package org.dockercontainerobjects
 
 import com.github.dockerjava.api.DockerClient
+import org.dockercontainerobjects.util.debug
+import org.dockercontainerobjects.util.loggerFor
 import java.io.IOException
 import java.net.Proxy
 import java.net.URL
@@ -8,22 +10,35 @@ import java.net.URLConnection
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.atomic.AtomicInteger
 
 class ContainerObjectsEnvironment(
         val dockerClient: DockerClient,
         val dockerNetworkProxy: Proxy,
-        private val executorService: ScheduledExecutorService?): AutoCloseable {
+        executorService: ScheduledExecutorService?): AutoCloseable {
 
     val manager: ContainerObjectsManager = ContainerObjectsManagerImpl(this)
 
     val enhancer: ContainerObjectsClassEnhancer = ContainerObjectsClassEnhancerImpl(this)
 
-    val executor: ScheduledExecutorService by lazy {
-        if (executorService !== null)
-            executorService
-        else
-            Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors())
+    private var executorInternallyManaged: Boolean
+    private var executorInternal: ScheduledExecutorService?
+
+    init {
+        executorInternal = executorService
+        executorInternallyManaged = false
     }
+
+    val executor: ScheduledExecutorService
+            get() {
+                if (executorInternal == null) {
+                    executorInternallyManaged = true
+                    executorInternal = Executors.newScheduledThreadPool(
+                            Runtime.getRuntime().availableProcessors(), EnvironmentThreadFactory)
+                }
+                return executorInternal!!
+            }
 
     private val containers: MutableMap<Any, ContainerObjectContext<*>> = ConcurrentHashMap()
 
@@ -37,6 +52,8 @@ class ContainerObjectsEnvironment(
     override fun close() {
         ExtensionManager.teardownEnvironment(this)
         dockerClient.close()
+        if (executorInternallyManaged)
+            executorInternal!!.shutdown()
     }
 
     @Throws(IOException::class)
@@ -60,5 +77,30 @@ class ContainerObjectsEnvironment(
 
     internal fun getContainerObjectRegistration(containerInstance: Any): ContainerObjectContext<*> {
         return containers[containerInstance] ?: throw IllegalArgumentException("Provided container instance is not registered in this environment")
+    }
+
+    object EnvironmentThreadFactory: ThreadFactory {
+
+        override fun newThread(r: Runnable) = EnvironmentThread(r)
+    }
+
+    class EnvironmentThread(r: Runnable): Thread(r) {
+
+        val threadId = threadCounter.incrementAndGet()
+
+        override fun run() {
+            l.debug { "environment thread $threadId starting" }
+            try {
+                super.run()
+            } finally {
+                l.debug { "environment thread $threadId ending" }
+            }
+        }
+    }
+
+    companion object {
+        private val l = loggerFor<ContainerObjectsEnvironment>()
+
+        @JvmField internal val threadCounter = AtomicInteger()
     }
 }
