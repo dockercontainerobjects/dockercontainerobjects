@@ -1,11 +1,10 @@
 package org.dockercontainerobjects.support
 
-import org.dockercontainerobjects.ContainerObjectsEnvironment
-import java.util.concurrent.CompletableFuture
+import org.dockercontainerobjects.util.debug
+import org.dockercontainerobjects.util.loggerFor
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeoutException
-import javax.inject.Inject
 
 abstract class AbstractLateInitContainerObject: LateInitContainerObject {
 
@@ -13,10 +12,8 @@ abstract class AbstractLateInitContainerObject: LateInitContainerObject {
 
     open protected val maxTimeoutMillis get() = 1000*60*5 // 5 minutes
 
-    @Inject
-    protected lateinit var environment: ContainerObjectsEnvironment
-
     protected fun markAsReady() {
+        l.debug("container is being marked as ready")
         readyCounter.countDown()
     }
 
@@ -24,6 +21,7 @@ abstract class AbstractLateInitContainerObject: LateInitContainerObject {
 
     @Throws(TimeoutException::class, InterruptedException::class)
     override final fun waitForReady(timeoutMillis: Int) {
+        l.debug { "waiting until container ready, up to $timeoutMillis ms" }
         if (!readyCounter.await(timeoutMillis.toLong(), MILLISECONDS))
             throw TimeoutException()
     }
@@ -38,6 +36,7 @@ abstract class AbstractLateInitContainerObject: LateInitContainerObject {
 
     protected open fun onBeforeReady() {}
 
-    override final fun whenReady(): CompletableFuture<Void> =
-            CompletableFuture.runAsync(Runnable { waitForReady() }, environment.executor)
+    companion object {
+        private val l = loggerFor<AbstractLateInitContainerObject>()
+    }
 }

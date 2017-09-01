@@ -1,5 +1,6 @@
 package org.dockercontainerobjects.support
 
+import org.dockercontainerobjects.ContainerObjectsEnvironment
 import org.dockercontainerobjects.annotations.AfterContainerStarted
 import org.dockercontainerobjects.util.debug
 import org.dockercontainerobjects.util.loggerFor
@@ -7,12 +8,16 @@ import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit.MILLISECONDS
+import javax.inject.Inject
 
 abstract class ScheduledCheckLateInitContainerObject: AbstractLateInitContainerObject() {
 
     companion object {
         private val l = loggerFor<ScheduledCheckLateInitContainerObject>()
     }
+
+    @Inject
+    protected lateinit var environment: ContainerObjectsEnvironment
 
     private lateinit var started: Instant
     private lateinit var checkfuture: ScheduledFuture<*>
@@ -39,7 +44,7 @@ abstract class ScheduledCheckLateInitContainerObject: AbstractLateInitContainerO
         if (successful)
             CompletableFuture
                     .runAsync(Runnable { onBeforeReady() }, environment.executor)
-                    .thenRun(this::markAsReady)
+                    .thenRunAsync(Runnable { markAsReady() }, environment.executor)
     }
 
     private fun isCheckExpired() =

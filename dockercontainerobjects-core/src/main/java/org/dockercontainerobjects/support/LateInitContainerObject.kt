@@ -11,6 +11,4 @@ interface LateInitContainerObject {
     fun waitForReady(timeoutMillis: Int)
 
     fun waitForReady()
-
-    fun whenReady(): CompletableFuture<Void>
 }
