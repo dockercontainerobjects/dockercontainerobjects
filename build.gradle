@@ -64,12 +64,6 @@ subprojects {
         }
     }
 
-    dependencies {
-        resolutionRules files("${rootProject.projectDir}/src/main/rules/exclude-log4j.json")
-        resolutionRules files("${rootProject.projectDir}/src/main/rules/exclude-commons-logging.json")
-        resolutionRules files("${rootProject.projectDir}/src/main/rules/upgrade-jackson.json")
-    }
-
     nebulaRelease {
         releaseBranchPatterns = [/master/, /HEAD/, /release\/v\d+\.\d+\.x/] as Set
     }
@@ -98,8 +92,14 @@ subprojects {
     }
 }
 
+dependencies {
+    resolutionRules files("${rootProject.projectDir}/src/main/rules/exclude-log4j.json")
+    resolutionRules files("${rootProject.projectDir}/src/main/rules/exclude-commons-logging.json")
+    resolutionRules files("${rootProject.projectDir}/src/main/rules/upgrade-jackson.json")
+}
+
 task wrapper(type: Wrapper) {
-    gradleVersion = '4.1'
+    gradleVersion = '4.2'
 }
 
 task clean(type: Delete) {
