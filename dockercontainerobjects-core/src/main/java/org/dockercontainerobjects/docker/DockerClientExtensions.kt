@@ -64,7 +64,7 @@ fun DockerClient.removeImage(imageId: String) {
 fun DockerClient.buildImage(dockerFileOrFolder: File, imageTag: String, forcePull: Boolean): String {
     l.debug { "Building docker image with '$dockerFileOrFolder'" }
     return buildImageCmd(dockerFileOrFolder)
-            .withTag(imageTag)
+            .withTags(setOf(imageTag))
             .withPull(forcePull)
             .exec(BuildImageResultCallback())
             .awaitImageId()
@@ -79,10 +79,10 @@ fun DockerClient.buildImage(dockerTar: ByteArray, imageTag: String, forcePull: B
 fun DockerClient.buildImage(dockerTar: InputStream, imageTag: String, forcePull: Boolean): String {
     l.debug("Building docker image from tar")
     return buildImageCmd(dockerTar)
-        .withTag(imageTag)
-        .withPull(forcePull)
-        .exec(BuildImageResultCallback())
-        .awaitImageId()
+            .withTags(setOf(imageTag))
+            .withPull(forcePull)
+            .exec(BuildImageResultCallback())
+            .awaitImageId()
 }
 
 fun DockerClient.createContainer(imageId: String, environment: List<String>): CreateContainerResponse {
