@@ -7,12 +7,13 @@ import org.dockercontainerobjects.ContainerObjectsManager
 import org.dockercontainerobjects.util.ofOneType
 import java.lang.reflect.Field
 import java.net.Proxy
+import javax.net.SocketFactory
 
 class GlobalObjectsInjectorExtension: BaseContainerObjectsExtension() {
 
     companion object {
         private val FIELD_SELECTOR =
-                ofOneType(ContainerObjectsEnvironment::class, ContainerObjectsManager::class, DockerClient::class, Proxy::class)
+                ofOneType(ContainerObjectsEnvironment::class, ContainerObjectsManager::class, DockerClient::class, Proxy::class, SocketFactory::class)
     }
 
     override fun <T: Any> getFieldSelectorOnInstanceCreated(ctx: ContainerObjectContext<T>) = FIELD_SELECTOR
@@ -25,6 +26,7 @@ class GlobalObjectsInjectorExtension: BaseContainerObjectsExtension() {
             ContainerObjectsManager::class -> ctx.environment.manager
             DockerClient::class -> ctx.environment.dockerClient
             Proxy::class -> ctx.environment.dockerNetworkProxy
+            SocketFactory::class -> ProxiedInetSocketFactory(ctx.environment.dockerNetworkProxy)
             else -> throw IllegalStateException()
         }
     }
