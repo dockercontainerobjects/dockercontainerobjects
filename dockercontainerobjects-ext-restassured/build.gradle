@@ -9,6 +9,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${rootProject.kotlinVersion}"
     implementation "io.rest-assured:rest-assured:${rootProject.restassuredVersion}"
 
+    testCompileOnly "org.apiguardian:apiguardian-api:${project.apiGuardian}"
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitJupiterVersion}"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitJupiterVersion}"

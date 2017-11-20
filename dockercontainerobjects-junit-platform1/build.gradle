@@ -10,6 +10,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${rootProject.kotlinVersion}"
     implementation "org.slf4j:slf4j-api:${rootProject.slf4jVersion}" // [1]
 
+    testCompileOnly "org.apiguardian:apiguardian-api:${project.apiGuardian}"
+
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitJupiterVersion}"
     testRuntimeOnly "ch.qos.logback:logback-classic:${rootProject.logbackVersion}" // [1]
 }
