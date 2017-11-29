@@ -6,7 +6,7 @@
 dependencies {
     api project(':dockercontainerobjects-core')
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre8:${rootProject.kotlinVersion}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${rootProject.kotlinVersion}"
     implementation "io.rest-assured:rest-assured:${rootProject.restassuredVersion}"
 
     testCompileOnly "org.apiguardian:apiguardian-api:${project.apiGuardian}"
