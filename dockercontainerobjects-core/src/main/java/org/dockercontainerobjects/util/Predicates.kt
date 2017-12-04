@@ -1,5 +1,6 @@
 @file:JvmName("Predicates")
 @file:Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST")
+
 package org.dockercontainerobjects.util
 
 import java.util.function.Predicate

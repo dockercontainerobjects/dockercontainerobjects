@@ -1,5 +1,6 @@
 @file:JvmName("CompressExtensions")
 @file:Suppress("NOTHING_TO_INLINE")
+
 package org.dockercontainerobjects.util
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry

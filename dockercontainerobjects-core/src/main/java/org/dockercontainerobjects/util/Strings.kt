@@ -1,4 +1,5 @@
 @file:JvmName("Strings")
+
 package org.dockercontainerobjects.util
 
 private const val UNDERSCORE: Char = '_'

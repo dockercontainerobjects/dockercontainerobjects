@@ -1,5 +1,6 @@
 @file:JvmName("ContainerObjectsAnnotations")
 @file:Suppress("DEPRECATED_JAVA_ANNOTATION")
+
 package org.dockercontainerobjects.annotations
 
 import java.lang.annotation.Inherited
