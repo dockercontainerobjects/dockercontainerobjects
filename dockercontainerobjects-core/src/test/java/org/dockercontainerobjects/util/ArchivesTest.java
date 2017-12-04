@@ -1,7 +1,8 @@
 package org.dockercontainerobjects.util;
 
-import static org.dockercontainerobjects.util.CompressExtensions.buildTAR;
-import static org.dockercontainerobjects.util.CompressExtensions.withEntry;
+import static org.dockercontainerobjects.util.Archives.tar;
+import static org.dockercontainerobjects.util.Archives.withEntry;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -25,9 +26,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("Compression util tests")
+@DisplayName("Archives util tests")
 @Tag("util")
-public class CompressExtensionsTest {
+public class ArchivesTest {
 
     static final String TEST_FILENAME = "test.txt";
     static final String TEST_CONTENT = "sample";
@@ -35,22 +36,32 @@ public class CompressExtensionsTest {
     @Test
     @DisplayName("withEntry should fail if any parameter is null")
     void allArgsRequiredForEntryCreation() {
-        assertThrows(IllegalArgumentException.class, () -> withEntry(null, TEST_FILENAME, new byte[]{}));
-        assertThrows(IllegalArgumentException.class, () -> withEntry(new TarArchiveOutputStream(new ByteArrayOutputStream()), null, new byte[]{}));
-        assertThrows(IllegalArgumentException.class, () -> withEntry(new TarArchiveOutputStream(new ByteArrayOutputStream()), TEST_FILENAME, (byte[])null));
-    }
-
-    @Test
-    @DisplayName("TAR with null content provider should fail")
-    void tarWithNullProviderShouldFail() {
-        assertThrows(IllegalArgumentException.class, () -> buildTAR(null, false));
+        assertAll(
+                () -> assertThrows(
+                        IllegalArgumentException.class,
+                        () -> withEntry(null, TEST_FILENAME, new byte[]{})
+                ),
+                () -> assertThrows(
+                        IllegalArgumentException.class,
+                        () -> withEntry(
+                                new TarArchiveOutputStream(new ByteArrayOutputStream()),
+                                null,
+                                new byte[] {})
+                ),
+                () -> assertThrows(
+                        IllegalArgumentException.class,
+                        () -> withEntry(
+                                new TarArchiveOutputStream(new ByteArrayOutputStream()),
+                                TEST_FILENAME,
+                                (byte[]) null)
+                )
+        );
     }
 
     @Test
     @DisplayName("TAR with no content should fail")
     void tarWithNoContentShouldFail() {
-        assertThrows(IllegalArgumentException.class, () -> buildTAR(
-                tar -> Unit.INSTANCE, false));
+        assertThrows(IllegalArgumentException.class, () -> tar(false, tar -> Unit.INSTANCE));
     }
 
     @Test
@@ -58,7 +69,7 @@ public class CompressExtensionsTest {
     void tarWithContentShouldWork() {
         try {
             byte[] data =
-                    buildTAR(tar -> {
+                    tar(false, tar -> {
                         try {
                             TarArchiveEntry entry = new TarArchiveEntry(TEST_FILENAME);
                             byte[] content = TEST_CONTENT.getBytes(StandardCharsets.UTF_8);
@@ -70,9 +81,10 @@ public class CompressExtensionsTest {
                             throw new RuntimeException(e);
                         }
                         return Unit.INSTANCE;
-                    }, false);
+                    });
             assertNotNull(data);
-            ArchiveInputStream in = new ArchiveStreamFactory().createArchiveInputStream(new ByteArrayInputStream(data));
+            ArchiveInputStream in = new ArchiveStreamFactory()
+                    .createArchiveInputStream(new ByteArrayInputStream(data));
             assertNotNull(in);
             assertTrue(in instanceof TarArchiveInputStream);
             ArchiveEntry entry = in.getNextEntry();

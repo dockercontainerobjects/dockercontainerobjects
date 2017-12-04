@@ -3,7 +3,6 @@ package org.dockercontainerobjects
 import com.github.dockerjava.api.exception.DockerException
 import com.github.dockerjava.api.exception.NotFoundException
 import com.github.dockerjava.api.model.NetworkSettings
-import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.dockercontainerobjects.ContainerObjectLifecycleStage.CONTAINER_CREATED
 import org.dockercontainerobjects.ContainerObjectLifecycleStage.CONTAINER_REMOVED
 import org.dockercontainerobjects.ContainerObjectLifecycleStage.CONTAINER_STARTED
@@ -57,7 +56,7 @@ import org.dockercontainerobjects.docker.stopContainer
 import org.dockercontainerobjects.docker.MethodCallerLogResultCallback
 import org.dockercontainerobjects.util.and
 import org.dockercontainerobjects.util.annotatedWith
-import org.dockercontainerobjects.util.buildTARGZ
+import org.dockercontainerobjects.util.targz
 import org.dockercontainerobjects.util.call
 import org.dockercontainerobjects.util.debug
 import org.dockercontainerobjects.util.expectingNoParameters
@@ -208,7 +207,7 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
                         if (imageRef is File)
                             environment.dockerClient.buildImage(imageRef, cleanImageTag, forcePull)
                         else {
-                            val tar = buildDockerTAR(imageRef!!, content, containerType)
+                            val tar = buildDockerImageContent(imageRef!!, content, containerType)
                             environment.dockerClient.buildImage(tar, cleanImageTag, forcePull)
                         }
                 l.debug { "image for container class '${containerType.simpleName}' build with id '$generatedImageId' and tagged as '$cleanImageTag'" }
@@ -256,7 +255,7 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             environment.addAll(
                     containerType.getAnnotationsByType<EnvironmentEntry>()
                             .stream()
-                            .map { if (it.name.isNullOrEmpty()) it.value else it.name+"="+it.value }
+                            .map { if (it.name.isEmpty()) it.value else it.name+"="+it.value }
                             .collect(toList()))
             // check for environment defined as methods
             containerType.findMethods(expectingNoParameters() and annotatedWith<Method>(Environment::class))
@@ -387,24 +386,12 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             invokeContainerLifecycleListeners(A::class.java)
 
         @Throws(IOException::class)
-        private fun buildDockerTAR(dockerfile: Any, content: Map<String, Any>?, containerType: Class<*>) =
-            buildTARGZ {
-                it.withGenericEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.normalize(containerType))
-                if (content !== null)
-                    content.forEach { k, v -> it.withGenericEntry(k, v.normalize(containerType)) }
+        private fun buildDockerImageContent(dockerfile: Any, entries: Map<String, Any>?, containerType: Class<*>) =
+            targz {
+                it.withEntry(DOCKERFILE_DEFAULT_NAME, dockerfile.normalize(containerType))
+                if (entries !== null)
+                    entries.forEach { k, v -> it.withEntry(k, v.normalize(containerType)) }
             }
-
-        @Throws(IOException::class)
-        private fun TarArchiveOutputStream.withGenericEntry(filename: String, content: Any)  {
-            l.debug { "Adding TAR entry with name '$filename' and content of type '${content.javaClass.simpleName}'" }
-            when (content) {
-                is URL -> withEntry(filename, content)
-                is URI -> withEntry(filename, content)
-                is InputStream -> withEntry(filename, content)
-                is ByteArray -> withEntry(filename, content)
-                else -> IllegalArgumentException("Content is not of a supported type")
-            }
-        }
 
         private fun Any.normalize(loader: Class<*>) =
             if (this is String)
