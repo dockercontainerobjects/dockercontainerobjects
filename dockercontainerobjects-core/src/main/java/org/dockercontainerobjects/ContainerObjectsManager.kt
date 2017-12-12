@@ -1,11 +1,14 @@
 package org.dockercontainerobjects
 
-import com.github.dockerjava.api.model.NetworkSettings
+import org.dockercontainerobjects.docker.Addresses
+import org.dockercontainerobjects.docker.ContainerLocator
+import org.dockercontainerobjects.docker.NetworkSettings
 import java.net.InetAddress
 
 interface ContainerObjectsManager: AutoCloseable {
 
     companion object {
+
         const val IMAGE_TAG_DYNAMIC_PLACEHOLDER = "*"
 
         const val SCHEME_CLASSPATH = "classpath"
@@ -24,12 +27,12 @@ interface ContainerObjectsManager: AutoCloseable {
     fun <T: Any> destroy(containerInstance: T)
     fun <T: Any> restart(containerInstance: T)
 
-    fun getContainerId(containerInstance: Any): String?
+    fun getContainerId(containerInstance: Any): ContainerLocator?
     fun getContainerStatus(containerInstance: Any): ContainerStatus
     fun isContainerRunning(containerInstance: Any): Boolean =
-        getContainerStatus(containerInstance) == ContainerStatus.STARTED
+            getContainerStatus(containerInstance) == ContainerStatus.STARTED
     fun getContainerNetworkSettings(containerInstance: Any): NetworkSettings?
-    fun <ADDR: InetAddress> getContainerAddress(containerInstance: Any, addrType: Class<ADDR>): ADDR?
+    fun getContainerAddresses(containerInstance: Any): Addresses?
     fun getContainerAddress(containerInstance: Any): InetAddress? =
-        getContainerAddress(containerInstance, InetAddress::class.java)
+            getContainerAddresses(containerInstance)?.preferred
 }

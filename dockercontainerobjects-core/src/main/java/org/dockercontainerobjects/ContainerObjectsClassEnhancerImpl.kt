@@ -19,6 +19,7 @@ import kotlin.reflect.KClass
 class ContainerObjectsClassEnhancerImpl(private val env: ContainerObjectsEnvironment): ContainerObjectsClassEnhancer {
 
     companion object {
+
         private val l = loggerFor<ContainerObjectsClassEnhancerImpl>()
     }
 
@@ -29,39 +30,71 @@ class ContainerObjectsClassEnhancerImpl(private val env: ContainerObjectsEnviron
 
     override fun setupClass(type: Class<*>) {
         l.debug { "Setting up class containers in class '${type.simpleName}'" }
-        type.setupContainerFields(null, onClass<Field>() and annotatedWith<Field>(ContainerObject::class))
+        setupContainerFields(
+                type,
+                null,
+                onClass<Field>() and annotatedWith(ContainerObject::class)
+        )
     }
 
     override fun setupInstance(instance: Any) {
         l.debug { "Setting up instance containers in class '${instance.javaClass.simpleName}'" }
-        instance.javaClass.setupContainerFields(instance, onInstance<Field>() and annotatedWith<Field>(ContainerObject::class))
+        setupContainerFields(
+                instance.javaClass,
+                instance,
+                onInstance<Field>() and annotatedWith(ContainerObject::class)
+        )
     }
 
     override fun teardownClass(type: Class<*>) {
         l.debug { "Tearing down class containers in class '${type.simpleName}'" }
-        type.teardownContainerFields(null, onClass<Field>() and annotatedWith<Field>(ContainerObject::class))
+        teardownContainerFields(
+                type,
+                null,
+                onClass<Field>() and annotatedWith(ContainerObject::class)
+        )
     }
 
     override fun teardownInstance(instance: Any) {
         l.debug { "Tearing down instance containers in class '${instance.javaClass.simpleName}'" }
-        instance.javaClass.teardownContainerFields(instance, onInstance<Field>() and annotatedWith<Field>(ContainerObject::class))
+        teardownContainerFields(
+                instance.javaClass,
+                instance,
+                onInstance<Field>() and annotatedWith(ContainerObject::class)
+        )
     }
 
-    private fun <T: Any> Class<T>.setupContainerFields(instance: Any?, containerFieldSelector: Predicate<Field>) {
-        findFields(containerFieldSelector).stream().forEach { setupContainerField(instance, it) }
-    }
+    private fun <T: Any> setupContainerFields(
+            type: Class<T>,
+            instance: T?,
+            containerFieldSelector: Predicate<Field>
+    ) =
+            type.findFields(containerFieldSelector)
+                    .stream()
+                    .forEach { setupContainerField(instance, it) }
 
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun <T: Any> KClass<T>.setupContainerFields(instance: Any?, containerFieldSelector: Predicate<Field>) =
-        java.setupContainerFields(instance, containerFieldSelector)
+    private inline fun <T: Any> KClass<T>.setupContainerFields(
+            type: KClass<T>,
+            instance: T?,
+            containerFieldSelector: Predicate<Field>
+    ) = setupContainerFields(type.java, instance, containerFieldSelector)
 
-    private fun <T: Any> Class<T>.teardownContainerFields(instance: Any?, containerFieldSelector: Predicate<Field>) {
-        findFields(containerFieldSelector).stream().forEach { teardownContainerField(instance, it) }
-    }
+    private fun <T: Any> teardownContainerFields(
+            type: Class<T>,
+            instance: T?,
+            containerFieldSelector: Predicate<Field>
+    ) =
+            type.findFields(containerFieldSelector)
+                    .stream()
+                    .forEach { teardownContainerField(instance, it) }
 
     @Suppress("NOTHING_TO_INLINE")
-    inline private fun <T: Any> KClass<T>.teardownContainerFields(instance: Any?, containerFieldSelector: Predicate<Field>) =
-        java.teardownContainerFields(instance, containerFieldSelector)
+    inline private fun <T: Any> teardownContainerFields(
+            type: KClass<T>,
+            instance: T?,
+            containerFieldSelector: Predicate<Field>
+    ) = teardownContainerFields(type.java, instance, containerFieldSelector)
 
     private fun setupContainerField(instance: Any?, field: Field) {
         if (field.isReadOnly)

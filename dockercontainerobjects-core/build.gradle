@@ -4,13 +4,15 @@
 //     at runtime, clients need to include log4j, logback, log4j-over-slf4j or any other implementation of log4j api
 
 dependencies {
-    api "com.github.docker-java:docker-java:${rootProject.dockerJavaVersion}" // [1]
-    api "javax.inject:javax.inject:${project.javaxInjectVersion}"
+    api project(':dockercontainerobjects-docker-api')
+    api "javax.inject:javax.inject:${rootProject.javaxInjectVersion}"
 
+    implementation project(':dockercontainerobjects-docker-impl-dockerjava') // [1]
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${rootProject.kotlinVersion}"
-    implementation "org.slf4j:slf4j-api:${project.slf4jVersion}"
+    implementation "org.slf4j:slf4j-api:${rootProject.slf4jVersion}"
+    implementation "com.github.docker-java:docker-java:${rootProject.dockerJavaVersion}" // [1]
 
-    testCompileOnly "org.apiguardian:apiguardian-api:${project.apiGuardian}"
+    testCompileOnly "org.apiguardian:apiguardian-api:${rootProject.apiGuardian}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitJupiterVersion}"
 

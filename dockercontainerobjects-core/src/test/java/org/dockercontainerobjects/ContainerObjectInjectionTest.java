@@ -6,13 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
-import com.github.dockerjava.api.DockerClient;
 import org.dockercontainerobjects.annotations.AfterContainerCreated;
 import org.dockercontainerobjects.annotations.AfterContainerStarted;
 import org.dockercontainerobjects.annotations.BeforeCreatingContainer;
 import org.dockercontainerobjects.annotations.ContainerAddress;
 import org.dockercontainerobjects.annotations.ContainerId;
 import org.dockercontainerobjects.annotations.RegistryImage;
+import org.dockercontainerobjects.docker.Docker;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +36,7 @@ public class ContainerObjectInjectionTest extends ContainerObjectManagerBasedTes
     }
 
     @Test
-    @DisplayName("DockerClient fields are injected before creating a container")
+    @DisplayName("Docker fields are injected before creating a container")
     void dockerClientInjected() {
         assertTrue(container.dockerClientInjected.get());
     }
@@ -65,7 +65,7 @@ public class ContainerObjectInjectionTest extends ContainerObjectManagerBasedTes
     public static class InjectedContainer {
 
         @Inject
-        private DockerClient dockerClient;
+        private Docker dockerClient;
 
         @Inject
         private ContainerObjectsManager containerObjectManager;

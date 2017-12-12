@@ -1,6 +1,8 @@
 package org.dockercontainerobjects
 
-import com.github.dockerjava.api.model.NetworkSettings
+import org.dockercontainerobjects.docker.ContainerLocator
+import org.dockercontainerobjects.docker.ImageLocator
+import org.dockercontainerobjects.docker.NetworkSettings
 
 internal class ContainerObjectContextImpl<T: Any>(
         override val environment: ContainerObjectsEnvironment, override val type: Class<T>):
@@ -11,9 +13,9 @@ internal class ContainerObjectContextImpl<T: Any>(
             field = value
             ExtensionManager.updateContainerObjectFields(this)
         }
-    override var imageId: String? = null
+    override var image: ImageLocator? = null
         internal set
-    override var containerId: String? = null
+    override var container: ContainerLocator? = null
         internal set
     override var autoRemoveImage: Boolean? = null
         internal set

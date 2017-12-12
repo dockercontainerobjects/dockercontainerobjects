@@ -13,6 +13,7 @@ import org.dockercontainerobjects.annotations.BeforeRestartingContainer;
 import org.dockercontainerobjects.annotations.BeforeStartingContainer;
 import org.dockercontainerobjects.annotations.BeforeStoppingContainer;
 import org.dockercontainerobjects.annotations.RegistryImage;
+import org.dockercontainerobjects.docker.ContainerLocator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ public class RestartingContainerObjectTest extends ContainerObjectManagerBasedTe
         RestartableContainer containerInstance = manager.create(RestartableContainer.class);
         try {
             assertEquals(ContainerObjectsManager.ContainerStatus.STARTED, manager.getContainerStatus(containerInstance));
-            final String firstContainerId = manager.getContainerId(containerInstance);
+            final ContainerLocator firstContainerId = manager.getContainerId(containerInstance);
 
             assertAll(
                     () -> assertNotNull(firstContainerId),
@@ -43,7 +44,7 @@ public class RestartingContainerObjectTest extends ContainerObjectManagerBasedTe
             );
 
             manager.restart(containerInstance);
-            final String secondContainerId = manager.getContainerId(containerInstance);
+            final ContainerLocator secondContainerId = manager.getContainerId(containerInstance);
 
             assertAll(
                     () -> assertNotNull(secondContainerId),

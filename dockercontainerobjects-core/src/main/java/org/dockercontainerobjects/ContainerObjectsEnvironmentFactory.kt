@@ -1,8 +1,9 @@
 package org.dockercontainerobjects
 
-import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientBuilder
+import org.dockercontainerobjects.docker.Docker
+import org.dockercontainerobjects.docker.impl.dockerjava.DockerJavaDockerImpl
 import org.dockercontainerobjects.util.toCapitalCase
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -26,22 +27,27 @@ object ContainerObjectsEnvironmentFactory {
     val PROPERTY_CONTAINERPROXY_TYPE_DIRECT = Proxy.Type.DIRECT.name.toUpperCase()
 
     @JvmStatic
-    fun newEnvironment(dockerClient: DockerClient, containerProxy: Proxy = createDockerNetworkProxy()) =
-            ContainerObjectsEnvironment(dockerClient, containerProxy)
+    fun newEnvironment(docker: Docker, containerProxy: Proxy = createDockerNetworkProxy()) =
+            ContainerObjectsEnvironment(docker, containerProxy)
 
     @JvmStatic
     fun newEnvironment(properties: Properties) =
-        newEnvironment(createDockerClient(properties), createDockerNetworkProxy(properties))
+        newEnvironment(createDocker(properties), createDockerNetworkProxy(properties))
 
     @JvmStatic
     fun newEnvironment() =
-        newEnvironment(DockerClientBuilder.getInstance().build(), createDockerNetworkProxy())
+        newEnvironment(
+                DockerJavaDockerImpl(DockerClientBuilder.getInstance().build()),
+                createDockerNetworkProxy()
+        )
 
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun createDockerClient(properties: Properties) =
-        DockerClientBuilder
-                .getInstance(createDockerClientConfig(properties))
-                .build()
+    private inline fun createDocker(properties: Properties) =
+            DockerJavaDockerImpl(
+                    DockerClientBuilder
+                            .getInstance(createDockerClientConfig(properties))
+                            .build()
+            )
 
     private fun createDockerClientConfig(properties: Properties): DefaultDockerClientConfig {
         val builder = DefaultDockerClientConfig.createDefaultConfigBuilder()
@@ -64,23 +70,42 @@ object ContainerObjectsEnvironmentFactory {
     }
 
     private fun createDockerNetworkProxy(properties: Properties = System.getProperties()): Proxy {
-        val proxyType = properties.entry(PROPERTY_DOCKERNETWORKPROXY_TYPE, ENV_DOCKERNETWORKPROXY_TYPE, PROPERTY_CONTAINERPROXY_TYPE_DIRECT).toUpperCase()
+        val proxyType = properties.entry(
+                PROPERTY_DOCKERNETWORKPROXY_TYPE,
+                ENV_DOCKERNETWORKPROXY_TYPE,
+                PROPERTY_CONTAINERPROXY_TYPE_DIRECT
+        ).toUpperCase()
         if (proxyType == PROPERTY_CONTAINERPROXY_TYPE_DIRECT)
             return Proxy.NO_PROXY
         val type = Proxy.Type.valueOf(proxyType)
-        val host = InetAddress.getByName(properties.entry(PROPERTY_DOCKERNETWORKPROXY_HOSTNAME, ENV_DOCKERNETWORKPROXY_HOSTNAME))
-        val portValue = properties.entry(PROPERTY_DOCKERNETWORKPROXY_PORT, ENV_DOCKERNETWORKPROXY_PORT)
+        val host = InetAddress.getByName(
+                properties.entry(
+                        PROPERTY_DOCKERNETWORKPROXY_HOSTNAME,
+                        ENV_DOCKERNETWORKPROXY_HOSTNAME
+                ))
+        val portValue = properties.entry(
+                PROPERTY_DOCKERNETWORKPROXY_PORT,
+                ENV_DOCKERNETWORKPROXY_PORT
+        )
         val port =
-                if (portValue.isNotEmpty())
+                if (portValue.isNotEmpty()) {
                     portValue.toInt()
-                else if (type == Proxy.Type.SOCKS)
+                } else if (type == Proxy.Type.SOCKS) {
                     DEFAULTVALUE_DOCKERNETWORKPROXY_PORT_SOCKS
-                else
+                } else {
                     DEFAULTVALUE_DOCKERNETWORKPROXY_PORT_HTTP
+                }
         return Proxy(type, InetSocketAddress(host, port))
     }
 
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun Properties.entry(propName: String, fallbackEnvName: String, fallbackValue: String = "") =
-        getProperty(propName) ?: getProperty(fallbackEnvName) ?: System.getenv(fallbackEnvName) ?: fallbackValue
+    private inline fun Properties.entry(
+            propName: String,
+            fallbackEnvName: String,
+            fallbackValue: String = ""
+    ) =
+        getProperty(propName) ?:
+                getProperty(fallbackEnvName) ?:
+                System.getenv(fallbackEnvName) ?:
+                fallbackValue
 }

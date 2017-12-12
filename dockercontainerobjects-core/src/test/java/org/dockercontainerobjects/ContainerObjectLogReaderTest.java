@@ -14,6 +14,7 @@ import org.dockercontainerobjects.annotations.AfterContainerStopped;
 import org.dockercontainerobjects.annotations.BeforeStartingContainer;
 import org.dockercontainerobjects.annotations.OnLogEntry;
 import org.dockercontainerobjects.annotations.RegistryImage;
+import org.dockercontainerobjects.docker.ContainerLogEntryContext;
 import org.dockercontainerobjects.support.ContainerObjectReference;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -68,8 +69,8 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
         private final CountDownLatch latch = new CountDownLatch(1);
 
         @OnLogEntry
-        void onLogEntry(LogEntryContext ctx) {
-            if (SERVER_STARTED_PATTERN.matcher(ctx.getEntryText()).find()) {
+        void onLogEntry(ContainerLogEntryContext ctx) {
+            if (SERVER_STARTED_PATTERN.matcher(ctx.getText()).find()) {
                 latch.countDown();
                 ctx.stop();
             }
@@ -125,10 +126,10 @@ public class ContainerObjectLogReaderTest extends ContainerObjectManagerBasedTes
         }
 
         @OnLogEntry(includeTimestamps = true)
-        void onLogEntry(LogEntryContext ctx) {
+        void onLogEntry(ContainerLogEntryContext ctx) {
             exception = null;
             try {
-                String line = ctx.getEntryText();
+                String line = ctx.getText();
                 ParsePosition position = new ParsePosition(0);
                 Instant timestamp = Instant.from(DateTimeFormatter.ISO_INSTANT.parse(line, position));
                 line = line.substring(position.getIndex()).trim();

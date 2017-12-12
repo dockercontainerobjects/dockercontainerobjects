@@ -5,7 +5,6 @@ import io.restassured.specification.ProxySpecification
 import io.restassured.specification.RequestSpecification
 import org.dockercontainerobjects.ContainerObjectContext
 import org.dockercontainerobjects.ContainerObjectsManager
-import org.dockercontainerobjects.docker.inetAddress
 import org.dockercontainerobjects.extensions.BaseContainerObjectsExtension
 import org.dockercontainerobjects.util.getAnnotation
 import org.dockercontainerobjects.util.ofType
@@ -31,8 +30,8 @@ class RestAssuredInjectorExtension: BaseContainerObjectsExtension() {
     override fun <T: Any> getFieldValueOnContainerStarted(ctx: ContainerObjectContext<T>, field: Field): Any {
         val spec = RestAssured.given()
         val config = field.getAnnotation<RestAssuredSpecConfig>()
-        if (config !== null) {
-            val hostAddress = ctx.networkSettings?.inetAddress()?.hostAddress ?: throw IllegalStateException()
+        if (config != null) {
+            val hostAddress = ctx.networkSettings?.addresses?.preferred?.hostAddress ?: throw IllegalStateException()
             if (config.baseUri != DEFAULT_BASE_URI)
                 spec.baseUri(
                         config.baseUri.replace(HOST_DYNAMIC_PLACEHOLDER, hostAddress))
@@ -42,7 +41,7 @@ class RestAssuredInjectorExtension: BaseContainerObjectsExtension() {
                                 ContainerObjectsManager.SCHEME_HTTP,
                                 hostAddress,
                                 config.port))
-            if (!config.basePath.isNullOrEmpty())
+            if (!config.basePath.isEmpty())
                 spec.basePath(config.basePath)
             spec.urlEncodingEnabled(config.urlEncodingEnabled)
         }

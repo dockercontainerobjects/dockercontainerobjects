@@ -1,8 +1,5 @@
 package org.dockercontainerobjects
 
-import com.github.dockerjava.api.exception.DockerException
-import com.github.dockerjava.api.exception.NotFoundException
-import com.github.dockerjava.api.model.NetworkSettings
 import org.dockercontainerobjects.ContainerObjectLifecycleStage.CONTAINER_CREATED
 import org.dockercontainerobjects.ContainerObjectLifecycleStage.CONTAINER_REMOVED
 import org.dockercontainerobjects.ContainerObjectLifecycleStage.CONTAINER_STARTED
@@ -42,21 +39,18 @@ import org.dockercontainerobjects.annotations.Environment
 import org.dockercontainerobjects.annotations.EnvironmentEntry
 import org.dockercontainerobjects.annotations.OnLogEntry
 import org.dockercontainerobjects.annotations.RegistryImage
-import org.dockercontainerobjects.docker.buildImage
-import org.dockercontainerobjects.docker.createContainer
-import org.dockercontainerobjects.docker.fetchContainerLogs
-import org.dockercontainerobjects.docker.inetAddressOfType
-import org.dockercontainerobjects.docker.inspectContainer
-import org.dockercontainerobjects.docker.inspectImage
-import org.dockercontainerobjects.docker.pullImage
-import org.dockercontainerobjects.docker.removeContainer
-import org.dockercontainerobjects.docker.removeImage
-import org.dockercontainerobjects.docker.startContainer
-import org.dockercontainerobjects.docker.stopContainer
-import org.dockercontainerobjects.docker.MethodCallerLogResultCallback
+import org.dockercontainerobjects.docker.Addresses
+import org.dockercontainerobjects.docker.ContainerLocator
+import org.dockercontainerobjects.docker.ContainerSpec
+import org.dockercontainerobjects.docker.ContainerStatus.CREATED
+import org.dockercontainerobjects.docker.ContainerStatus.EXITED
+import org.dockercontainerobjects.docker.ContainerStatus.RUNNING
+import org.dockercontainerobjects.docker.ImageName
+import org.dockercontainerobjects.docker.ImageNotFoundException
+import org.dockercontainerobjects.docker.ImageSpec
+import org.dockercontainerobjects.docker.NetworkSettings
 import org.dockercontainerobjects.util.and
 import org.dockercontainerobjects.util.annotatedWith
-import org.dockercontainerobjects.util.targz
 import org.dockercontainerobjects.util.call
 import org.dockercontainerobjects.util.debug
 import org.dockercontainerobjects.util.expectingNoParameters
@@ -70,24 +64,21 @@ import org.dockercontainerobjects.util.isOfReturnType
 import org.dockercontainerobjects.util.loggerFor
 import org.dockercontainerobjects.util.onInstance
 import org.dockercontainerobjects.util.stream
+import org.dockercontainerobjects.util.targz
 import org.dockercontainerobjects.util.toSnakeCase
 import org.dockercontainerobjects.util.withEntry
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
 import java.lang.reflect.Method
-import java.net.InetAddress
 import java.net.URI
-import java.net.URL
 import java.time.Instant
-import java.time.temporal.Temporal
 import java.util.UUID
 import java.util.stream.Collectors
-import java.util.stream.Collectors.toList
 
 class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment): ContainerObjectsManager {
 
     companion object {
+
         const val IMAGE_TAG_DEFAULT_TEMPLATE = "%s_%s:latest"
 
         const val SCHEME_PATH_SEPARATOR = "://"
@@ -134,68 +125,28 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
                 throw IllegalArgumentException(
                         "Container class '${containerType.simpleName}' has more than one way to define the image to use")
             }
-            var imageId: String?
-            var forcePull = false
-            var autoRemove: Boolean
+            val containerConfig: ContainerConfiguration
             var imageBuilt = false
 
-            if (registryImageAnnotation !== null) {
-                imageId = registryImageAnnotation.value
-                if (imageId.isNullOrEmpty()) {
-                    throw IllegalArgumentException(
-                            "Annotation '${RegistryImage::class.java.simpleName}' on class '${containerType.simpleName}' must define a value to be used to define the image to use")
-                }
-                forcePull = registryImageAnnotation.forcePull
-                autoRemove = registryImageAnnotation.autoRemove
+            if (registryImageAnnotation != null) {
+                containerConfig = containerConfigFromClass(registryImageAnnotation, containerType)
             } else if (registryImageMethods.isNotEmpty()) {
-                val registryImageMethod = registryImageMethods[0]
-                if (!registryImageMethod.isOfReturnType<String>()) {
-                    throw IllegalArgumentException(
-                            "Method '$registryImageMethod' on class '${containerType.simpleName}' must return '${String::class.java.simpleName}' to be used to define the image to use")
-                }
-                val registryImageAnnotationValue = registryImageMethod.getAnnotation<RegistryImage>()!!
-                imageId = registryImageAnnotationValue.value
-                if (!imageId.isNullOrEmpty()) {
-                    throw IllegalArgumentException(
-                            "Annotation '${RegistryImage::class.java.simpleName}' on method '$registryImageMethod' on class '${containerType.simpleName}' cannot define a value to be used to define the image to use")
-                }
-                imageId = registryImageMethod.call(containerInstance) as String
-                if (imageId.isNullOrEmpty()) {
-                    throw IllegalArgumentException(
-                            "Method '$registryImageMethod' on class '${containerType.simpleName}' must return a non-null value to be used to define the image to use")
-                }
-                forcePull = registryImageAnnotationValue.forcePull
-                autoRemove = registryImageAnnotationValue.autoRemove
+                containerConfig = containerConfigFromMethod(registryImageMethods.first(), containerType, containerInstance)
             } else {
                 containerInstance.invokeContainerLifecycleListeners<BeforeBuildingImage>()
-                var imageRef: Any? = null
-                var imageTag: String? = null
-                if (buildImageAnnotation !== null) {
-                    imageRef = buildImageAnnotation.value
-                    if (imageRef.isEmpty()) {
-                        throw IllegalArgumentException(
-                                "Annotation '${BuildImage::class.java.simpleName}' on class '${containerType.simpleName}' must define a non-empty value pointing to a Dockerfile")
-                    }
-                    imageTag = buildImageAnnotation.tag
-                } else if (buildImageMethods.isNotEmpty()) {
-                    val buildImageMethod = buildImageMethods[0]
-                    listOf(String::class, URI::class, URL::class, File::class, InputStream::class).stream().filter { buildImageMethod.isOfReturnType(it) }.findAny().orElseThrow {
-                        IllegalArgumentException(
-                                "Method '$buildImageMethod' on class '${containerType.simpleName}' must return a valid type pointing to a Dockerfile")
-                    }
-                    imageRef = buildImageMethod.call(containerInstance)
-                    if (imageRef == null) {
-                        throw IllegalArgumentException(
-                                "Method '$buildImageMethod' on class '${containerType.simpleName}' must return a non-null value to be used to define the image to use")
-                    }
+                val imageConfig = when {
+                    buildImageAnnotation !== null -> imageConfigFromClass(buildImageAnnotation, containerType)
+                    buildImageMethods.isNotEmpty() -> imageConfigFromMethod(buildImageMethods.first(), containerType, containerInstance)
+                    else -> throw IllegalStateException() // we would have failed earlier
                 }
 
-                if (imageTag == null || imageTag.isEmpty()) {
-                    imageTag = defaultImageTag(containerType)
+                if (imageConfig.tag.isEmpty()) {
+                    imageConfig.tag = defaultImageTag(containerType)
                 }
-                if (imageTag.contains(IMAGE_TAG_DYNAMIC_PLACEHOLDER)) {
-                    imageTag = imageTag.replace(IMAGE_TAG_DYNAMIC_PLACEHOLDER, UUID.randomUUID().toString())
+                if (imageConfig.tag.contains(IMAGE_TAG_DYNAMIC_PLACEHOLDER)) {
+                    imageConfig.tag = imageConfig.tag.replace(IMAGE_TAG_DYNAMIC_PLACEHOLDER, UUID.randomUUID().toString())
                 }
+                imageConfig.tag = imageConfig.tag.toLowerCase()
                 val content = mutableMapOf<String, Any>()
                 containerType.getAnnotationsByType<BuildImageContentEntry>().stream().forEach {
                     l.debug { "Adding entry name '${it.name}' with content '${it.value}'" }
@@ -213,76 +164,80 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
                             if (newContent !== null) content.putAll(newContent)
                         }
 
-                val cleanImageTag = imageTag.toLowerCase()
-                l.debug { "image for container class '${containerType.simpleName}' will be build and tagged as '$cleanImageTag'"  }
-                val generatedImageId =
-                        if (imageRef is File) {
-                            ctx.environment.dockerClient.buildImage(imageRef, cleanImageTag, forcePull)
-                        } else {
-                            val tar = buildDockerImageContent(imageRef!!, content, containerType)
-                            ctx.environment.dockerClient.buildImage(tar, cleanImageTag, forcePull)
+                l.debug { "image for container class '${containerType.simpleName}' will be build and tagged as '${imageConfig.tag}'"  }
+                val image = ImageName(imageConfig.tag)
+                val specs =
+                        imageConfig.ref.let {
+                            when (it) {
+                                is File -> ImageSpec(if (it.isDirectory()) File(it, DOCKERFILE_DEFAULT_NAME) else it)
+                                else -> ImageSpec(buildDockerImageContent(it, content, containerType))
+                            }
                         }
-                l.debug { "image for container class '${containerType.simpleName}' build with id '$generatedImageId' and tagged as '$cleanImageTag'" }
-                imageId = cleanImageTag
-                autoRemove = true
+                        .withTag(image)
+                        .withPull(imageConfig.forcePull)
+                val generatedImageId = ctx.environment.docker.images.build(specs)
+                l.debug { "image for container class '${containerType.simpleName}' built with id '$generatedImageId' and tagged as '${imageConfig.tag}'" }
+                containerConfig = ContainerConfiguration(
+                        spec = ContainerSpec(image),
+                        autoRemove = true,
+                        forcePull = false
+                )
                 imageBuilt = true
                 containerInstance.invokeContainerLifecycleListeners<AfterImageBuilt>()
             }
 
-            val imagePresent = imageBuilt ||
-                    try {
-                        imageId = ctx.environment.dockerClient.inspectImage(imageId).id
-                        true
-                    } catch (e: NotFoundException) {
-                        false
-                    }
-            if (imagePresent && !imageBuilt) autoRemove = false
-            if (forcePull || !imagePresent) {
-                imageId = ctx.environment.dockerClient.pullImage(imageId).id
+            val imagePresent =
+                    imageBuilt ||
+                            ctx.environment.docker.images.isAvailable(containerConfig.spec.image)
+            if (imagePresent && !imageBuilt) containerConfig.autoRemove = false
+            if (containerConfig.forcePull || !imagePresent) {
+                ctx.environment.docker.images.pull(containerConfig.spec.image as ImageName)
             }
 
-            ctx.imageId = imageId
-            ctx.autoRemoveImage = autoRemove
+            ctx.image = containerConfig.spec.image
+            ctx.autoRemoveImage = containerConfig.autoRemove
             ctx.stage = IMAGE_PREPARED
             containerInstance.invokeContainerLifecycleListeners<AfterImagePrepared>()
         }
 
         private fun <T: Any> createContainer(ctx: ContainerObjectContextImpl<T>) {
             val containerInstance = ctx.instance ?: throw IllegalStateException()
-            val containerImageId = ctx.imageId ?: throw IllegalStateException()
+            val containerImageId = ctx.image ?: throw IllegalStateException()
             containerInstance.invokeContainerLifecycleListeners<BeforeCreatingContainer>()
 
             val containerEnvironment = collectContainerEnvironmentVariables(containerInstance)
-            ctx.containerId = ctx.environment.dockerClient.createContainer(containerImageId, containerEnvironment).id
+            val spec = ContainerSpec(containerImageId).withEnvironmentVariables(containerEnvironment)
+            ctx.container = ctx.environment.docker.containers.create(spec)
 
             ctx.stage = CONTAINER_CREATED
             containerInstance.invokeContainerLifecycleListeners<AfterContainerCreated>()
         }
 
-        private fun collectContainerEnvironmentVariables(containerInstance: Any): List<String> {
+        private fun collectContainerEnvironmentVariables(containerInstance: Any): Map<String, String> {
             val containerType = containerInstance.javaClass
 
-            val environment = mutableListOf<String>()
+            val environment = mutableMapOf<String, String>()
             // check for environment defined as class annotations
-            environment.addAll(
+            environment +=
                     containerType.getAnnotationsByType<EnvironmentEntry>()
-                            .stream()
-                            .map { if (it.name.isEmpty()) it.value else it.name+"="+it.value }
-                            .collect(toList()))
+                            .map {
+                                if (it.name.isEmpty()) {
+                                    it.value.substringBefore('=') to it.value.substringAfter('=', "")
+                                } else {
+                                    it.name to it.value
+                                }
+                            }.toMap()
             // check for environment defined as methods
             containerType.findMethods(expectingNoParameters() and annotatedWith<Method>(Environment::class))
-                    .stream()
                     .forEach {
-                        if (!it.isOfReturnType<Map<String, String>>())
+                        if (!it.isOfReturnType<Map<String, String>>()) {
                             throw IllegalArgumentException(
-                                    "Method '$it' on class '${containerType.simpleName}' must return a Map to be used to specify environment variales")
+                                    "Method '$it' on class '${containerType.simpleName}' must return a Map to be used to specify environment variales"
+                            )
+                        }
                         @Suppress("UNCHECKED_CAST")
                         val newEnvironment = it.call(containerInstance) as Map<String, String>?
-                        if (newEnvironment !== null)
-                            environment.addAll(
-                                    newEnvironment.entries.stream()
-                                            .map { (key, value) -> key+"="+value }
-                                            .collect(toList()))
+                        if (newEnvironment !== null) environment += newEnvironment
             }
 
             return environment
@@ -290,13 +245,14 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
 
         private fun <T: Any> startContainer(ctx: ContainerObjectContextImpl<T>) {
             val containerInstance = ctx.instance ?: throw IllegalStateException()
-            val currContainerId = ctx.containerId ?: throw IllegalStateException()
+            val currContainerId = ctx.container ?: throw IllegalStateException()
 
             containerInstance.invokeContainerLifecycleListeners<BeforeStartingContainer>()
             val start = Instant.now()
-            val response = ctx.environment.dockerClient.startContainer(currContainerId)
+            ctx.environment.docker.containers.start(currContainerId)
+            val info = ctx.environment.docker.containers.inspect(currContainerId)
 
-            ctx.networkSettings = response.networkSettings
+            ctx.networkSettings = info.network
             ctx.stage = CONTAINER_STARTED
             containerInstance.invokeContainerLifecycleListeners<AfterContainerStarted>()
             registerContainerLogReceivers(ctx, start)
@@ -304,10 +260,10 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
 
         private fun <T: Any> stopContainer(ctx: ContainerObjectContextImpl<T>) {
             val containerInstance = ctx.instance ?: throw IllegalStateException()
-            val currContainerId = ctx.containerId ?: throw IllegalStateException()
+            val currContainerId = ctx.container ?: throw IllegalStateException()
 
             containerInstance.invokeContainerLifecycleListeners<BeforeStoppingContainer>()
-            ctx.environment.dockerClient.stopContainer(currContainerId)
+            ctx.environment.docker.containers.stop(currContainerId)
 
             ctx.stage = CONTAINER_STOPPED
             containerInstance.invokeContainerLifecycleListeners<AfterContainerStopped>()
@@ -324,10 +280,10 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
 
         private fun <T: Any> removeContainer(ctx: ContainerObjectContextImpl<T>) {
             val containerInstance = ctx.instance ?: throw IllegalStateException()
-            val currContainerId = ctx.containerId ?: throw IllegalStateException()
+            val currContainerId = ctx.container ?: throw IllegalStateException()
 
             containerInstance.invokeContainerLifecycleListeners<BeforeRemovingContainer>()
-            ctx.environment.dockerClient.removeContainer(currContainerId)
+            ctx.environment.docker.containers.remove(currContainerId)
 
             ctx.stage = CONTAINER_REMOVED
             containerInstance.invokeContainerLifecycleListeners<AfterContainerRemoved>()
@@ -335,22 +291,22 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
 
         private fun <T: Any> teardownImage(ctx: ContainerObjectContextImpl<T>) {
             val containerInstance = ctx.instance ?: throw IllegalStateException()
-            val currImageId = ctx.imageId ?: throw IllegalStateException()
+            val currImageId = ctx.image ?: throw IllegalStateException()
 
             containerInstance.invokeContainerLifecycleListeners<BeforeReleasingImage>()
             // try to remove image if requested
             if (ctx.autoRemoveImage == true) { // verifies for not null and true in one go
                 try {
                     containerInstance.invokeContainerLifecycleListeners<BeforeRemovingImage>()
-                    ctx.environment.dockerClient.removeImage(currImageId)
+                    ctx.environment.docker.images.remove(currImageId)
                     containerInstance.invokeContainerLifecycleListeners<AfterImageRemoved>()
-                } catch (e: NotFoundException) {
+                } catch (e: ImageNotFoundException) {
                     // if the image is already removed, log and ignore
-                    l.warn("Image '${ctx.imageId}' requested to be auto-removed, but was not found", e)
-                } catch (e: DockerException) {
+                    l.warn("Image '${ctx.image}' requested to be auto-removed, but was not found", e)
+                } catch (e: RuntimeException) {
                     // TODO check if there is a more specific exception for this case
                     // if the image is still in use, log and ignore
-                    l.warn("Image '${ctx.imageId}' requested to be auto-removed, but seems to be still in use", e)
+                    l.warn("Image '${ctx.image}' requested to be auto-removed, but seems to be still in use", e)
                 }
             }
 
@@ -365,28 +321,16 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
             ctx.stage = INSTANCE_DISCARDED
         }
 
-        private fun <T: Any> registerContainerLogReceivers(ctx: ContainerObjectContextImpl<T>, since: Temporal) {
+        private fun <T: Any> registerContainerLogReceivers(ctx: ContainerObjectContextImpl<T>, since: Instant) {
             val containerInstance = ctx.instance ?: throw IllegalStateException()
-            val currContainerId = ctx.containerId ?: throw IllegalStateException()
+            val currContainerId = ctx.container ?: throw IllegalStateException()
 
             val type = containerInstance.javaClass
             type.findMethods(
                         onInstance<Method>() and expectingParameterCount(1) and annotatedWith(OnLogEntry::class))
                     .forEach { method ->
-                        val logEntryAnotation = method.getAnnotation<OnLogEntry>()!!
-                        val paramType: Class<*> = method.parameterTypes[0]
-                        val callback =
-                                when (paramType.kotlin) {
-                                    LogEntryContext::class -> MethodCallerLogResultCallback.LogEntryContextArgumentMethodCallback(ctx, method)
-                                    String::class -> MethodCallerLogResultCallback.StringArgumentMethodCallback(ctx, method)
-                                    ByteArray::class -> MethodCallerLogResultCallback.ByteArrayArgumentMethodCallback(ctx, method)
-                                    else -> null
-                                }
-                        if (callback !== null)
-                            ctx.environment.dockerClient.fetchContainerLogs(
-                                    currContainerId, since,
-                                    logEntryAnotation.includeStdOut, logEntryAnotation.includeStdErr, logEntryAnotation.includeTimestamps,
-                                    callback)
+                        val spec = containerLogSpecFromMethod(method, type, containerInstance, since)
+                        ctx.environment.docker.containers.logs(currContainerId, spec)
                     }
         }
 
@@ -468,17 +412,17 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
         restartContainer(ctx)
     }
 
-    override fun getContainerId(containerInstance: Any): String? =
-            env.getContainerObjectRegistration(containerInstance).containerId
+    override fun getContainerId(containerInstance: Any): ContainerLocator? =
+            env.getContainerObjectRegistration(containerInstance).container
 
     override fun getContainerStatus(containerInstance: Any): ContainerObjectsManager.ContainerStatus {
         val containerId = getContainerId(containerInstance)
         if (containerId === null) return ContainerObjectsManager.ContainerStatus.UNKNOWN
-        val state = env.dockerClient.inspectContainer(containerId).state
-        return when (state.status) {
-            "running" -> ContainerObjectsManager.ContainerStatus.STARTED
-            "created" -> ContainerObjectsManager.ContainerStatus.CREATED
-            "exited" -> ContainerObjectsManager.ContainerStatus.STOPPED
+        val status = env.docker.containers.status(containerId)
+        return when (status) {
+            CREATED -> ContainerObjectsManager.ContainerStatus.CREATED
+            RUNNING -> ContainerObjectsManager.ContainerStatus.STARTED
+            EXITED -> ContainerObjectsManager.ContainerStatus.STOPPED
             else -> ContainerObjectsManager.ContainerStatus.UNKNOWN
         }
     }
@@ -486,6 +430,6 @@ class ContainerObjectsManagerImpl(private val env: ContainerObjectsEnvironment):
     override fun getContainerNetworkSettings(containerInstance: Any): NetworkSettings? =
             env.getContainerObjectRegistration(containerInstance).networkSettings
 
-    override fun <ADDR: InetAddress> getContainerAddress(containerInstance: Any, addrType: Class<ADDR>): ADDR? =
-            env.getContainerObjectRegistration(containerInstance).networkSettings?.inetAddressOfType(addrType)
+    override fun getContainerAddresses(containerInstance: Any): Addresses? =
+            env.getContainerObjectRegistration(containerInstance).networkSettings?.addresses
 }

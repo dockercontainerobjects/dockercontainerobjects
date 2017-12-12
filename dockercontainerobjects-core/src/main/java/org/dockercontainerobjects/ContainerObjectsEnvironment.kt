@@ -1,6 +1,6 @@
 package org.dockercontainerobjects
 
-import com.github.dockerjava.api.DockerClient
+import org.dockercontainerobjects.docker.Docker
 import org.dockercontainerobjects.util.debug
 import org.dockercontainerobjects.util.loggerFor
 import java.io.IOException
@@ -14,7 +14,7 @@ import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
 
 class ContainerObjectsEnvironment(
-        val dockerClient: DockerClient,
+        val docker: Docker,
         val dockerNetworkProxy: Proxy,
         executorService: ScheduledExecutorService?): AutoCloseable {
 
@@ -46,12 +46,12 @@ class ContainerObjectsEnvironment(
         ExtensionManager.setupEnvironment(this)
     }
 
-    constructor(dockerClient: DockerClient, dockerNetworkProxy: Proxy): this(dockerClient, dockerNetworkProxy, null)
+    constructor(docker: Docker, dockerNetworkProxy: Proxy): this(docker, dockerNetworkProxy, null)
 
     @Throws(IOException::class)
     override fun close() {
         ExtensionManager.teardownEnvironment(this)
-        dockerClient.close()
+        docker.close()
         if (executorInternallyManaged)
             executorInternal!!.shutdown()
     }
