@@ -1,0 +1,18 @@
+
+// NOTES:
+// [1] the dependency list excludes log4j, library clients must make a decision on the logging framework to use
+//     at runtime, clients need to include log4j, logback, log4j-over-slf4j or any other implementation of log4j api
+
+dependencies {
+    api project(':dockercontainerobjects-docker-api')
+
+    implementation "com.github.docker-java:docker-java:${rootProject.dockerJavaVersion}" // [1]
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${rootProject.kotlinVersion}"
+
+    testCompileOnly "org.apiguardian:apiguardian-api:${rootProject.apiGuardian}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.junitJupiterVersion}"
+
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.junitJupiterVersion}"
+    testRuntimeOnly "ch.qos.logback:logback-classic:${rootProject.logbackVersion}"
+}
