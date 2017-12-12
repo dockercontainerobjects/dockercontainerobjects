@@ -1,14 +1,13 @@
 package org.dockercontainerobjects;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URL;
-import com.google.common.io.Files;
-import com.google.common.io.Resources;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.apache.commons.io.IOUtils;
 import org.dockercontainerobjects.annotations.BuildImage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -84,16 +83,27 @@ public class ContainerObjectBuildingTest extends ContainerObjectManagerBasedTest
 
         @BuildImage
         protected File build() {
-            File dir = Files.createTempDir();
-            File dockerfile = new File(dir, "Dockerfile");
-            try (OutputStream out = new BufferedOutputStream(new FileOutputStream(dockerfile))) {
-                Resources.copy(getClass().getResource(TEST_DOCKERFILE_PATH), out);
+            try {
+                Path folder = Files.createTempDirectory("DOCKER_");
+                try {
+                    Path dockerfile = folder.resolve("Dockerfile");
+                    Files.createFile(dockerfile);
+                    try {
+                        try (InputStream input = getClass().getResourceAsStream(TEST_DOCKERFILE_PATH);
+                             FileOutputStream output = new FileOutputStream(dockerfile.toFile())) {
+                            IOUtils.copy(input, output);
+                        }
+                        // both dickerfile and folder should work
+                        return folder.toFile();
+                    } finally {
+                        dockerfile.toFile().deleteOnExit();
+                    }
+                } finally {
+                    folder.toFile().deleteOnExit();
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            dockerfile.deleteOnExit();
-            dir.deleteOnExit();
-            return dir;
         }
     }
 }
