@@ -1,8 +1,8 @@
 {
   "substitute": [
     {
-      "module": "com.fasterxml.jackson.core:jackson-core:(,2.9.2)",
-      "with": "com.fasterxml.jackson.core:jackson-core:2.9.2",
+      "module": "com.fasterxml.jackson.core:jackson-core:(,2.9.4)",
+      "with": "com.fasterxml.jackson.core:jackson-core:2.9.4",
       "reason": "use latest version of Jackson libraries",
       "author": "Ramon Rivas <rivasdiaz@gmail.com>",
       "date": "2017-11-19"
